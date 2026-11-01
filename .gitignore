@@ -1,0 +1,81 @@
+# ==========================================================
+#   .gitignore — PFT-Enhanced
+# ==========================================================
+
+# --- SECRETS & DONNÉES PERSO ---
+# Variables sensibles (seul .env.example est versionné)
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+settings/bank.yaml
+
+# Sauvegardes et dumps de BDD (données réelles)
+*.dump
+*.backup
+*.sql.gz
+
+# Fichiers perso (tableur d'origine, Power BI)
+*.xlsx
+*.pbix
+
+# Inserts de données réelles, en attente de remplacement par le seed
+db/schema/Inserts_DB_PFT.sql
+
+# --- DOSSIERS GÉNÉRÉS (contenu ignoré, .gitkeep conservé) ---
+data/**
+!data/**/
+!data/**/.gitkeep
+
+models/**
+!models/**/
+!models/**/.gitkeep
+
+logs/**
+!logs/**/
+!logs/**/.gitkeep
+*.log
+
+# --- EXPLORATION ---
+# Notebooks = brouillon perso, jamais versionnés
+notebooks/
+.ipynb_checkpoints/
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- TESTS & QUALITÉ ---
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# --- MLOPS (phase 4) ---
+mlruns/
+
+# --- LANCEURS LOCAUX ---
+# Chemins propres au PC perso
+run/
+launch.bat
+
+# --- IDE & SYSTÈME ---
+.vscode/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- POWER ARCHITECT ---
+db/schema/*.architect
+
+# --- RESSOURCES LOCALES ---
+docs/notes/
+docs/images/ico/
+
+# --- DIVERS ---
+arborescence.txt
+
+# --- TEMPORAIRE ---

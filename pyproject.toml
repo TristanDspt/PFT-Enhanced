@@ -1,0 +1,26 @@
+# pyproject.toml
+# Configuration de ruff (linter) pour PFT.
+# Usage : `ruff check .` (diagnostic) puis `ruff check . --fix` (corrections sûres uniquement).
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # style PEP8 (erreurs)
+    "F",    # erreurs logiques (imports inutilisés, noms non définis...)
+    "I",    # tri des imports
+    "UP",   # syntaxe Python moderne
+    "C4",   # comprehensions inutiles
+    "BLE",  # `except Exception` trop large
+]
+ignore = [
+    "E501",  # lignes longues tolérées (SQL, st.metric)
+    "C408",  # dict(...) est idiomatique avec Plotly
+    "E701",  # `with col: st.xxx(...)` sur une ligne : choix de lisibilité
+    "E712",  # `== True/False` est correct sur un masque pandas (`not Series` plante)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Faux positifs : ruff ne voit pas les @variables utilisées dans DataFrame.query()
+"app/components/st_logic.py" = ["F841"]

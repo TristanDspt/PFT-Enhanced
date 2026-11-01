@@ -1,0 +1,5 @@
+# settings/config.yaml
+
+tax_rates:
+  reduced: 0.186   # PEA, PEE : prélèvements sociaux seuls
+  flat: 0.314      # tout le reste : flat tax (PFU)

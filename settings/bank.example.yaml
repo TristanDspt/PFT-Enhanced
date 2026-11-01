@@ -1,0 +1,47 @@
+# settings/bank.example.yaml
+
+# Copier ce fichier en bank.yaml puis renseigner les vrais établissements.
+# bank.yaml est ignoré par git : ne jamais y mettre de vraies données dans ce fichier-ci.
+
+# Réglages pandas par format de fichier téléchargé (partagés entre produits)
+formats:
+    format_csv:
+        sep: ";"
+        header: 0
+        names: [cot_date, cot_prix]
+        usecols: [0, 1]
+        parse_dates: [cot_date]
+        dayfirst: true
+    format_xls:
+        skiprows: 2
+        names: [cot_date, cot_prix]
+        usecols: [0, 1]
+        parse_dates: [cot_date]
+        date_format: "%d/%m/%Y"
+        decimal: ","
+
+# Une entrée par produit, clé = pdt_id en base (entier, sans guillemets)
+# keyword : texte présent dans le nom du fichier téléchargé
+# type    : csv ou xls
+# format  : nom d'une entrée de "formats"
+products:
+    3:
+        name: Bank A Savings
+        keyword: EXPORT_A
+        type: csv
+        format: format_csv
+    4:
+        name: Bank B Fund 1
+        keyword: EXPORT_B1
+        type: xls
+        format: format_xls
+    5:
+        name: Bank B Fund 2
+        keyword: EXPORT_B2
+        type: xls
+        format: format_xls
+    6:
+        name: Bank B Fund 3
+        keyword: EXPORT_B3
+        type: xls
+        format: format_xls
