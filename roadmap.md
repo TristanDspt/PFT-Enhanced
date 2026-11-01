@@ -43,12 +43,17 @@
 - [ ] 🎓 Révision express Merise (MCD, MLD, MPD) + prise en main de Looping
 - [ ] MCD → MLD → MPD **PostgreSQL uniquement** (les news vont dans le stockage big data, hors Merise) — C4
 - [ ] Correction de la modélisation (séparation actif / portefeuille, nettoyage des contraintes et index) — C4
-- [ ] Renommage FR → EN : code Python pendant le nettoyage, schéma SQL avec le nouveau MPD
+- [ ] Renommage FR → EN : code Python (commit séparé) + schéma SQL avec le nouveau MPD
+- [ ] Suppression du doublon `UNIQUE (pdt_id, cot_date)` sur `cotation_cot` — C4
+- [ ] Régime fiscal : taux dans `config.yaml` + régime dérivé de `ptf_type_enveloppe` (fin des taux en dur dans `st_logic.py`) — C4, C17
+- [ ] Saisie : INSERT en f-strings → requêtes paramétrées (injection SQL) — C17
 
 **1.3 Données de démo**
 - [ ] 🎓 Principe d'un script de seed (génération de données fictives réalistes)
 - [ ] Script de seed : positions et mouvements fictifs, cotations réelles — C4, C17
-- [ ] Variable d'environnement pour basculer base perso / base démo
+- [ ] Bloc DEMO du `.env` rempli : l'app démarre en `ENVIRONMENT=DEMO` (prérequis README + CI)
+- [ ] Fichiers bancaires fictifs + `bank.yaml` démo pour montrer l'import PEE
+- [ ] Test d'installation depuis un venv vierge en suivant le README — C4, C17
 
 **1.4 Tests & CI**
 - [ ] 🎓 Bases de pytest
@@ -84,7 +89,7 @@
 - [ ] Choix de la techno big data pour les news, justifié au regard du REAC — C1, C2 🔶
 
 **2.3 Scraping news**
-- [ ] 🎓 Bases du scraping (HTML, parsing)
+- [ ] 🎓 Bases du scraping (HTML, parsing) + `requests` / `beautifulsoup4` dans `requirements.txt`
 - [ ] Specs d'extraction : sources, CGU / robots.txt, flux RSS privilégiés quand dispo (plus stables qu'une page HTML) — C1
 - [ ] Scraper : point d'entrée, gestion d'erreurs, logs, sauvegarde — C1
 - [ ] Tests du scraper sur des pages HTML sauvegardées (détecte la casse si un site change sa structure) — C1, C18
@@ -95,7 +100,7 @@
 - [ ] Requêtes d'extraction documentées (PostgreSQL + big data) : filtres, jointures, optimisations — C2
 
 **2.5 ETL & agrégation**
-- [ ] ETL existants (APIs + import CSV) remis au standard : init, erreurs, fin de traitement — C1
+- [ ] ETL existants (APIs + import CSV) remis au standard : fonctions + `main()`, logger dédié (`LOG015`), gestion d'erreurs, dédoublonnage de `type` dans `bank.yaml` — C1
 - [ ] Script d'agrégation : entrées corrompues, doublons, homogénéisation (dates, devises) + doc — C3
 - [ ] Script d'import en BDD + doc versionnée à la racine — C4
 - [ ] **Bascule v1 → v2** (en une seule fois) :
@@ -184,11 +189,14 @@
 - [ ] **Forecasting** : modèle d'entraînement + éval, sans chaîne MLOps complète (le sentiment peut servir de variable d'entrée)
 - [ ] **MCP** : interrogation de la BDD en langage naturel depuis Streamlit (accès en lecture seule, sécurisé)
 - [ ] **Page Projection** : finaliser `get_projection` / `make_graph_projection` / page
+- [ ] **Badge d'environnement** (DEMO / PROD) dans la sidebar
 
 ---
 
 ### 🚨 7. Bugs Mineurs
 - [ ] **Graph dashboards** : premier mois sans data `NaN sur diff`
+- [ ] **Graph perf mensuelle** : mois civils (mois en cours partiel) ≠ fenêtre des KPI → aligner ou légender
+- [ ] **Cosmétique** : en-têtes qui parlent encore de `Home.py` (`KPIs.py`, `st_charts.py`), docstring de `config.py` (`database.py` → `db_engine.py`)
 
 ---
 
