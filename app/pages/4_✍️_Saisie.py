@@ -220,13 +220,16 @@ def confirmer_operation(p_id, p_date, p_qte, p_frais, p_type, p_prix, p_cat, p_n
         with engine.begin() as conn:
         
             # On crée la requête SQL
-            requete_titre = f"""
-                INSERT INTO public.mouvement_mvt 
+            requete_titre = text("""
+                INSERT INTO public.mouvement_mvt
                     (pdt_id, mvt_date, mvt_nb_parts, mvt_frais, mvt_type_mouvement, mvt_prix)
-                VALUES 
-                    ({p_id}, '{p_date}', {type_pos}, {p_frais}, '{type_txt}', {p_prix})
-            """
-            conn.execute(text(requete_titre))
+                VALUES
+                    (:pdt_id, :mvt_date, :nb_parts, :frais, :type_mvt, :prix)
+            """)
+            conn.execute(requete_titre, {
+                "pdt_id": p_id, "mvt_date": p_date, "nb_parts": type_pos,
+                "frais": p_frais, "type_mvt": type_txt, "prix": p_prix,
+            })
 
             # Cas spécifique pour les achat vente passage de l'argent de ou vers la poche cash
             if p_id_cash:
@@ -245,13 +248,16 @@ def confirmer_operation(p_id, p_date, p_qte, p_frais, p_type, p_prix, p_cat, p_n
                     type_cash = "AJUSTEMENT"
 
                 # 2. Requête miroir
-                requete_cash = f"""
-                    INSERT INTO public.mouvement_mvt 
+                requete_cash = text("""
+                    INSERT INTO public.mouvement_mvt
                         (pdt_id, mvt_date, mvt_nb_parts, mvt_frais, mvt_type_mouvement, mvt_prix)
-                    VALUES 
-                        ({p_id_cash}, '{p_date}', {montant_cash}, 0, '{type_cash}', 1)
-                """
-                conn.execute(text(requete_cash)) 
+                    VALUES
+                        (:pdt_id, :mvt_date, :nb_parts, 0, :type_mvt, 1)
+                """)
+                conn.execute(requete_cash, {
+                    "pdt_id": p_id_cash, "mvt_date": p_date,
+                    "nb_parts": montant_cash, "type_mvt": type_cash,
+                })
 
         st.cache_data.clear()
         st.success("🚀 Données envoyées !")
