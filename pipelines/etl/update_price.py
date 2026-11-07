@@ -34,7 +34,7 @@ query = """
     FROM public.produit_financier_pdt
     WHERE pdt_ticker is not null
 """
-df_liste_ticker = pd.read_sql(query, engine)
+ticker_list_df = pd.read_sql(query, engine)
 
 # 3. On demande à la base la date la plus récente qu'on possède
 query_last_date = "SELECT MAX(cot_date) FROM public.cotation_cot"  # SELECT MAX envoi NONE si la table est vide
@@ -42,35 +42,35 @@ last_date_in_db = pd.read_sql(query_last_date, engine).iloc[0, 0]
 
 # 4. On définit la date de début pour Yahoo Finance
 if last_date_in_db is None:
-    date_debut = "2024-01-01"
+    start_date = "2024-01-01"
     logging.debug("Base vide, on récupère tout depuis 2024.")  # debug 1er import
 else:
     # On ajoute +1 jour pour ne pas re-télécharger le dernier jour déjà présent
-    date_debut = last_date_in_db + pd.Timedelta(days=1)
-    if date_debut > datetime.now().date():
+    start_date = last_date_in_db + pd.Timedelta(days=1)
+    if start_date > datetime.now().date():
         logging.info(f"Déjà à jour (Dernière date : {last_date_in_db}).")  # si le script a déjà été lancé ce jour
         logging.info("-" * 50)  # pour améliorer la lisibilité des logs
         engine.dispose()
         sys.exit()
-    logging.info(f"Dernière donnée en base : {last_date_in_db}. Ajout à partir du {date_debut}")  # info sur l'action du script
+    logging.info(f"Dernière donnée en base : {last_date_in_db}. Ajout à partir du {start_date}")  # info sur l'action du script
 
 # 5. LA BOUCLE
-for index, row in df_liste_ticker.iterrows():
+for index, row in ticker_list_df.iterrows():
     ticker = row["pdt_ticker"]
-    pdt_id = row["pdt_id"]
+    product_id = row["pdt_id"]
 
     try:
-        df_temp = yf.download(ticker, start=date_debut, multi_level_index=False)
+        temp_df = yf.download(ticker, start=start_date, multi_level_index=False)
 
-        if not df_temp.empty:
-            df_temp = df_temp["Close"].reset_index()
-            df_temp.columns = ["cot_date", "cot_prix"]
-            df_temp["pdt_id"] = pdt_id
-            df_temp["cot_date"] = pd.to_datetime(df_temp["cot_date"]).dt.date
+        if not temp_df.empty:
+            temp_df = temp_df["Close"].reset_index()
+            temp_df.columns = ["cot_date", "cot_prix"]
+            temp_df["pdt_id"] = product_id
+            temp_df["cot_date"] = pd.to_datetime(temp_df["cot_date"]).dt.date
 
             # On injecte uniquement les nouvelles lignes
-            df_temp.to_sql("cotation_cot", engine, if_exists="append", index=False)
-            logging.info(f"Ajout de {len(df_temp)} nouvelles lignes pour {ticker}")  # info sur le bon déroulement de l'import
+            temp_df.to_sql("cotation_cot", engine, if_exists="append", index=False)
+            logging.info(f"Ajout de {len(temp_df)} nouvelles lignes pour {ticker}")  # info sur le bon déroulement de l'import
         else:
             logging.info(f"Déjà à jour pour {ticker}.")  # info sur le bon déroulement de l'import
     except Exception as e:  # noqa: BLE001

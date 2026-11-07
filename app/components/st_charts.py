@@ -29,28 +29,28 @@ def apply_style(fig):
     )
 
 
-def make_donuts(df, names, values, color_discrete_map, rotation, labels, poids=None, taille=200):
+def make_donuts(df, names, values, color_discrete_map, rotation, center_label, weight=None, height=200):
     """
     Crée un donut chart générique pour afficher la répartition d'une enveloppe.
     Utilisé dans Home.py (poids global) et Dashboards.py (répartition interne).
 
     Args:
         df (DataFrame): données filtrées pour ce donut (ex: df.query("ptf_id in [1, 2]"))
-        names (str): nom de la colonne utilisée pour les labels (ex: 'nom_pour_legende')
+        names (str): nom de la colonne utilisée pour les labels (ex: 'legend_label')
         values (str): nom de la colonne utilisée pour les valeurs (ex: 'capital_actuel')
         color_discrete_map (dict): mapping label → couleur hex (ex: {"S&P 500": "#822A2A"})
         rotation (int): angle de départ du premier secteur (en degrés)
-        labels (str): texte affiché au centre du donut (ex: "Poids ETF")
-        poids (float, optional): poids en % affiché en grand au centre. 
+        center_label (str): texte affiché au centre du donut (ex: "Poids ETF")
+        weight (float, optional): poids en % affiché en grand au centre. 
                                 Si None, le label est centré sans valeur. Default: None
-        taille (int, optional): hauteur du graphique en pixels. Default: 200
+        height (int, optional): hauteur du graphique en pixels. Default: 200
 
     Returns:
         go.Figure: figure Plotly prête à être affichée avec st.plotly_chart()
     """
     # Layout commun : taille dynamique, fond transparent, pas de légende
     common_layout = dict(
-        height=taille,
+        height=height,
         showlegend=False,
         margin=dict(t=0, b=10, l=0, r=0),
         paper_bgcolor='rgba(0,0,0,0)',
@@ -74,11 +74,11 @@ def make_donuts(df, names, values, color_discrete_map, rotation, labels, poids=N
 
     # Layout + annotations : label en haut, poids en grand en bas
     annotations = []
-    if poids is not None:
-        annotations.append(dict(text=labels, x=0.5, y=0.6, showarrow=False, font=dict(size=18)))
-        annotations.append(dict(text=f"<b>{poids:.0f}%</b>", x=0.51, y=0.4, showarrow=False, font=dict(size=35)))
+    if weight is not None:
+        annotations.append(dict(text=center_label, x=0.5, y=0.6, showarrow=False, font=dict(size=18)))
+        annotations.append(dict(text=f"<b>{weight:.0f}%</b>", x=0.51, y=0.4, showarrow=False, font=dict(size=35)))
     else:
-        annotations.append(dict(text=labels, x=0.5, y=0.5, showarrow=False, font=dict(size=18)))
+        annotations.append(dict(text=center_label, x=0.5, y=0.5, showarrow=False, font=dict(size=18)))
     
     fig.update_layout(common_layout, hoverlabel=dict(font_size=15), annotations=annotations)
 
@@ -87,45 +87,45 @@ def make_donuts(df, names, values, color_discrete_map, rotation, labels, poids=N
 
 # --- 2. GRAPH GLOBAL ---
 
-def make_graph_global(df_apports_graph, df_capital_graph, titre=None):
+def make_global_chart(contributions_chart_df, capital_chart_df, title=None):
     """
     Crée le graphique principal de la Home : évolution du capital vs apports + perf marchés.
     Combine 2 axes Y : barres (perf %) à gauche, lignes (capital €) à droite.
 
     Args:
-        df_apports_graph (DataFrame): apports cumulés filtrés sur la période
+        contributions_chart_df (DataFrame): apports cumulés filtrés sur la période
                                         doit contenir : index datetime, colonne 'cumsum'
-        df_capital_graph (DataFrame): capital mensuel filtré sur la période
+        capital_chart_df (DataFrame): capital mensuel filtré sur la période
                                         doit contenir : index datetime, colonnes 'Total', 'delta', 'perf_graph'
-        titre (str, optional): titre affiché en haut du graphique. Default None.
+        title (str, optional): titre affiché en haut du graphique. Default None.
 
     Returns:
         go.Figure: figure Plotly prête à être affichée avec st.plotly_chart()
     """
-    graph_global = go.Figure()
+    global_chart = go.Figure()
 
     # Coloration dynamique des barres : rouge si perf négative, vert si positive
-    coloration = df_capital_graph['perf_graph'].apply(
+    bar_colors = capital_chart_df['perf_graph'].apply(
         lambda x: '#ff4b4b' if x < 0 else '#09ab3b'
     )
 
     # Ligne 1 : Capital total (axe Y droit)
-    graph_global.add_trace(go.Scatter(
-        x=df_capital_graph.index,
-        y=df_capital_graph['Total'],
+    global_chart.add_trace(go.Scatter(
+        x=capital_chart_df.index,
+        y=capital_chart_df['Total'],
         name="Capital",
         mode='lines+markers',
         marker=dict(size=4),
         yaxis="y2",
         line=dict(color='#FFD700'),
-        customdata=df_capital_graph['delta'],  # écart capital - apports cumulés
+        customdata=capital_chart_df['delta'],  # écart capital - apports cumulés
         hovertemplate="%{y:,.0f} €<br>Delta: %{customdata:,.0f} €"
     ))
 
     # Ligne 2 : Apports cumulés (axe Y droit) — sert de référence vs le capital réel
-    graph_global.add_trace(go.Scatter(
-        x=df_apports_graph.index,
-        y=df_apports_graph['cumsum'],
+    global_chart.add_trace(go.Scatter(
+        x=contributions_chart_df.index,
+        y=contributions_chart_df['cumsum'],
         name="Injecté",
         mode='lines+markers',
         marker=dict(size=4),
@@ -135,21 +135,21 @@ def make_graph_global(df_apports_graph, df_capital_graph, titre=None):
     ))
 
     # Barres : performance mensuelle des marchés en % (axe Y gauche)
-    graph_global.add_trace(go.Bar(
-        x=df_capital_graph.index,
-        y=df_capital_graph['perf_graph'],
+    global_chart.add_trace(go.Bar(
+        x=capital_chart_df.index,
+        y=capital_chart_df['perf_graph'],
         name="Perf Marchés",
-        marker=dict(color=coloration, opacity=0.8),
+        marker=dict(color=bar_colors, opacity=0.8),
         width=1000 * 3600 * 24 * 3,  # largeur des barres en millisecondes
         hovertemplate="%{y:,.2f} %"
     ))
 
     # Calcul des bornes de l'axe Y droit pour éviter que les lignes soient écrasées
-    y_min = min(df_capital_graph['Total'].min(), df_apports_graph['cumsum'].min()) * 0.95
-    y_max = max(df_capital_graph['Total'].max(), df_apports_graph['cumsum'].max()) * 1.05
+    y_min = min(capital_chart_df['Total'].min(), contributions_chart_df['cumsum'].min()) * 0.95
+    y_max = max(capital_chart_df['Total'].max(), contributions_chart_df['cumsum'].max()) * 1.05
 
     # Habillage général : double axe Y, légende horizontale en haut, hover unifié
-    graph_global.update_layout(
+    global_chart.update_layout(
         yaxis=dict(title="Perf %", showgrid=False),
         xaxis=dict(tickformat="%B %Y"),
         yaxis2=dict(
@@ -164,7 +164,7 @@ def make_graph_global(df_apports_graph, df_capital_graph, titre=None):
         hoverlabel=dict(font_size=15),
         separators=". "
     )
-    if titre:
-        graph_global.update_layout(title=titre)
+    if title:
+        global_chart.update_layout(title=title)
 
-    return graph_global
+    return global_chart

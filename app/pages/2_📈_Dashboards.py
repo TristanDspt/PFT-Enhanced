@@ -50,10 +50,10 @@ engine = db.get_engine()
 
 # Les vues SQL sont la source de toutes les données de l'app
 df             = db.get_view("view_global_portefeuille", engine)      # snapshot instantané
-df_histo       = db.get_view("view_historique_portefeuille", engine)  # historique quotidien
-df_histo_pdt   = db.get_view("view_historique_pdt", engine)           # historique quotidien par pdt_id
-df_apports     = db.get_view("view_apports_mensuels", engine)         # flux cash mensuels
-df_apports_pdt = db.get_view("view_apports_mensuels_pdt", engine)     # flux cash mensuels par pdt_id
+history_df       = db.get_view("view_historique_portefeuille", engine)  # historique quotidien
+history_product_df   = db.get_view("view_historique_pdt", engine)           # historique quotidien par pdt_id
+contributions_df     = db.get_view("view_apports_mensuels", engine)         # flux cash mensuels
+contributions_product_df = db.get_view("view_apports_mensuels_pdt", engine)     # flux cash mensuels par pdt_id
 
 
 # --- 3. SIDEBAR ---
@@ -62,53 +62,53 @@ with st.sidebar:
     st.title("⚙️ Menu")
 
     # Choix de l'enveloppe
-    choix_global = st.sidebar.radio("Menu", ["ETF", "PEA", "CTO", "STEF", "CiC"], label_visibility="collapsed")
+    selected_view = st.sidebar.radio("Menu", ["ETF", "PEA", "CTO", "STEF", "CiC"], label_visibility="collapsed")
 
     st.divider()
 
     # Slider de période — contrôle tous les blocs réactifs de la page
     st.subheader("🛠️ Configuration")
-    duree = st.select_slider(
+    period = st.select_slider(
         "Période d'analyse",
         options=["Début Mois", "1 Mois", "3 Mois", "6 Mois", "1 An", "3 Ans", "5 Ans", "Max"],
         value="6 Mois"
     )
     # Toggle pour afficher les graphs détaillés sur le desh CiC
-    if choix_global == "CiC":
-        vue_detail = st.toggle("Vue détaillée", value=False)
+    if selected_view == "CiC":
+        show_detail = st.toggle("Vue détaillée", value=False)
 
 
 # --- 4. LOGIQUE TEMPORELLE ---
 
-date_debut = logic.get_date_debut(duree)
-df_periode = logic.get_df_periode(df_histo, date_debut)
-df_periode_pdt = logic.get_df_periode(df_histo_pdt, date_debut)
+start_date = logic.get_start_date(period)
+period_df = logic.get_period_df(history_df, start_date)
+period_product_df = logic.get_period_df(history_product_df, start_date)
 
 
 # --- 5. INTERFACE GRAPHIQUE ---
 
 st.markdown("<h1 style='text-align: center;'>📊 Dashboards</h1>", unsafe_allow_html=True)
 
-match choix_global:
+match selected_view:
 
 # DASH ETF
 
     case "ETF":
-        df_etf = df.query("ptf_id in (1, 2)")
-        df_cotation = db.get_cotations_pdt(engine, 2, date_debut)
-        capital = logic.get_patrimoine_total(df_etf)
-        perf = logic.get_perf_marches(df_etf)
-        cap_injecte = df_etf['capital_investi'].sum()
-        tri = logic.get_tri_ptf(df, engine, [1, 2])
+        etf_df = df.query("ptf_id in (1, 2)")
+        quote_df = db.get_product_quotes(engine, 2, start_date)
+        capital = logic.get_total_wealth(etf_df)
+        perf = logic.get_market_perf(etf_df)
+        invested_capital = etf_df['capital_investi'].sum()
+        tri = logic.get_portfolio_tri(df, engine, [1, 2])
 
         # DONUTS — Préparation des DataFrames filtrés par enveloppe
-        df_donut = df.query("ptf_id in [1, 2]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
-        df_donut['nom_pour_legende'] = df_donut['ptf_id'].map({1: "S&P 500", 2: "Gold"})
+        donut_df = df.query("ptf_id in [1, 2]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
+        donut_df['legend_label'] = donut_df['ptf_id'].map({1: "S&P 500", 2: "Gold"})
 
         fig = charts.make_donuts(
-        df=df_donut, names='nom_pour_legende', values='capital_actuel',
+        df=donut_df, names='legend_label', values='capital_actuel',
         color_discrete_map={"S&P 500": "#822A2A", "Gold": "#D3AF37"},
-        rotation=50, labels="Poids ETF", taille=194
+        rotation=50, center_label="Poids ETF", height=194
         )
 
         st.markdown("<h2 style='text-align: center;'>ETF : PEA & CTO</h2>", unsafe_allow_html=True)
@@ -125,7 +125,7 @@ match choix_global:
             )
             st.metric(
                 label="Capital injecté",
-                value=f"{cap_injecte:,.0f} €".replace(",", " ")
+                value=f"{invested_capital:,.0f} €".replace(",", " ")
             )
 
         with col2:
@@ -146,50 +146,50 @@ match choix_global:
         st.divider()
 
         # JOURNAL DE BORD — KPIs par enveloppe sur la période sélectionnée (réactif au slider)
-        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {duree}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {period}</h4>", unsafe_allow_html=True)
     
-        mapping_ptf = {1: "PEA", 2: "CTO"}
-        perf_ptf = logic.get_perf_ptf_periode(df_histo, df_periode, duree, date_debut, mapping_ptf)
-        perf_etf_p = logic.get_perf_etf_periode(df_histo, df_periode, date_debut, duree)
-        injecte = logic.get_injecte_periode(df_histo, df_periode, duree, date_debut, [1, 2, 7, 8])
+        portfolio_name_map = {1: "PEA", 2: "CTO"}
+        perf_portfolio = logic.get_portfolio_period_perf(history_df, period_df, period, start_date, portfolio_name_map)
+        perf_etf_period = logic.get_etf_period_perf(history_df, period_df, start_date, period)
+        invested = logic.get_period_invested(history_df, period_df, period, start_date, [1, 2, 7, 8])
 
         col6, col7, col8, col9 = st.columns(4)
 
         with col6:
             st.metric(
                 label="Performance ETF",
-                value=f"{perf_etf_p['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_etf_p['pct']:.0f} %"
+                value=f"{perf_etf_period['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_etf_period['pct']:.0f} %"
             )
         with col7:
             st.metric(
                 label="Injecté",
-                value=f"{injecte:,.0f} €".replace(",", " "),
+                value=f"{invested:,.0f} €".replace(",", " "),
                 help="Somme des dépots sur la periode"
             )
         with col8:
             st.metric(
                 label="Performance PEA",
-                value=f"{perf_ptf['PEA']['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_ptf['PEA']['pct']:.0f} %"
+                value=f"{perf_portfolio['PEA']['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_portfolio['PEA']['pct']:.0f} %"
             )
         with col9:
             st.metric(
                 label="Performance CTO",
-                value=f"{perf_ptf['CTO']['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_ptf['CTO']['pct']:.0f} %"
+                value=f"{perf_portfolio['CTO']['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_portfolio['CTO']['pct']:.0f} %"
             )
 
         # GRAPHIQUES — (réactif au slider)
 
         # Lineplot global
-        df_apports_graph = df_apports_pdt.query("pdt_id in (7, 8)").groupby('mois')['injecte'].sum().reset_index()
-        mapping_tableau = {1: "PEA", 2: "CTO"}
-        df_tableau, df_tableau_buffer      = logic.get_tableau_mensuel_ptf(df_histo, df_apports_graph, duree, mapping_tableau)
-        df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, df_apports_graph, duree)
+        contributions_chart_df = contributions_product_df.query("pdt_id in (7, 8)").groupby('mois')['injecte'].sum().reset_index()
+        table_group_map = {1: "PEA", 2: "CTO"}
+        table_df, table_buffer_df      = logic.get_monthly_table_by_portfolio(history_df, contributions_chart_df, period, table_group_map)
+        contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, contributions_chart_df, period)
 
-        if duree not in ("1 Mois", "15 Jours", "Début Mois"):
-            fig_global = charts.make_graph_global(df_apports_graph, df_capital_graph)
+        if period not in ("1 Mois", "15 Jours", "Début Mois"):
+            fig_global = charts.make_global_chart(contributions_chart_df, capital_chart_df)
             st.plotly_chart(fig_global, width='stretch')
 
 
@@ -197,14 +197,14 @@ match choix_global:
 
     case "PEA":
 
-        df_pea = df.query("ptf_id == 1")
-        df_cotation = db.get_cotations_pdt(engine, 1, date_debut)
-        last = df_cotation.iloc[0]['cot_prix']
-        capital = logic.get_patrimoine_total(df_pea)
-        perf = logic.get_perf_marches(df_pea)
-        cap_injecte = df_pea['capital_investi'].sum()
-        capital_net = logic.get_capital_net(df, [1])
-        tri = logic.get_tri_ptf(df, engine, [1])
+        pea_df = df.query("ptf_id == 1")
+        quote_df = db.get_product_quotes(engine, 1, start_date)
+        last = quote_df.iloc[0]['cot_prix']
+        capital = logic.get_total_wealth(pea_df)
+        perf = logic.get_market_perf(pea_df)
+        invested_capital = pea_df['capital_investi'].sum()
+        net_capital = logic.get_net_capital(df, [1])
+        tri = logic.get_portfolio_tri(df, engine, [1])
 
         st.markdown("<h2 style='text-align: center;'>PEA : S&P 500</h2>", unsafe_allow_html=True)
 
@@ -244,76 +244,76 @@ match choix_global:
         with col4:
             st.metric(
                 label="Capital net",
-                value=f"{capital_net[1]:,.0f} €".replace(",", " "),
+                value=f"{net_capital[1]:,.0f} €".replace(",", " "),
                 help="Capital net d'impots : 18.6 %"
             )
         with col5:
             st.metric(
                 label="Capital injecté",
-                value=f"{cap_injecte:,.0f} €".replace(",", " ")
+                value=f"{invested_capital:,.0f} €".replace(",", " ")
             )
 
         st.divider()
 
         # JOURNAL DE BORD — KPIs par enveloppe sur la période sélectionnée (réactif au slider)
-        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {duree}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {period}</h4>", unsafe_allow_html=True)
     
-        mapping_ptf = {1: "PEA"}
-        perf_ptf = logic.get_perf_ptf_periode(df_histo, df_periode, duree, date_debut, mapping_ptf)
-        injecte = logic.get_injecte_periode(df_histo, df_periode, duree, date_debut, [1, 7])
-        haut = df_cotation.iloc[0]['max']
-        bas = df_cotation.iloc[0]['min']
+        portfolio_name_map = {1: "PEA"}
+        perf_portfolio = logic.get_portfolio_period_perf(history_df, period_df, period, start_date, portfolio_name_map)
+        invested = logic.get_period_invested(history_df, period_df, period, start_date, [1, 7])
+        high = quote_df.iloc[0]['max']
+        low = quote_df.iloc[0]['min']
 
         col6, col7, col8, col9 = st.columns(4)
 
         with col6:
             st.metric(
                 label="Performance",
-                value=f"{perf_ptf['PEA']['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_ptf['PEA']['pct']:.0f} %"
+                value=f"{perf_portfolio['PEA']['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_portfolio['PEA']['pct']:.0f} %"
             )
         with col7:
             st.metric(
                 label="Haut",
-                value=f"{haut:,.2f} €".replace(",", " "),
+                value=f"{high:,.2f} €".replace(",", " "),
                 help="Cours le plus haut sur"
             )
         with col8:
             st.metric(
                 label="Bas",
-                value=f"{bas:,.2f} €".replace(",", " "),
+                value=f"{low:,.2f} €".replace(",", " "),
                 help="Cours le plus bas"
             )
         with col9:
             st.metric(
                 label="Injecté",
-                value=f"{injecte:,.0f} €".replace(",", " "),
+                value=f"{invested:,.0f} €".replace(",", " "),
                 help="Somme des dépots sur la periode"
             )
         
         # GRAPHIQUES — (réactif au slider)
 
         # Lineplot global
-        df_apports = df_apports_pdt.query("pdt_id == 7")
-        mapping_tableau = {1: "PEA"}
-        df_tableau, df_tableau_buffer      = logic.get_tableau_mensuel_ptf(df_histo, df_apports, duree, mapping_tableau)
-        df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, df_apports, duree)
+        contributions_df = contributions_product_df.query("pdt_id == 7")
+        table_group_map = {1: "PEA"}
+        table_df, table_buffer_df      = logic.get_monthly_table_by_portfolio(history_df, contributions_df, period, table_group_map)
+        contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, contributions_df, period)
 
-        if duree not in ("1 Mois", "15 Jours", "Début Mois"):
-            fig_global = charts.make_graph_global(df_apports_graph, df_capital_graph)
+        if period not in ("1 Mois", "15 Jours", "Début Mois"):
+            fig_global = charts.make_global_chart(contributions_chart_df, capital_chart_df)
             st.plotly_chart(fig_global, width='stretch')
 
 # DASH CTO
 
     case "CTO":
-        df_cto = df.query("ptf_id == 2")
-        df_cotation = db.get_cotations_pdt(engine, 2, date_debut)
-        last = df_cotation.iloc[0]['cot_prix']
-        capital = logic.get_patrimoine_total(df_cto)
-        perf = logic.get_perf_marches(df_cto)
-        cap_injecte = df_cto['capital_investi'].sum()
-        capital_net = logic.get_capital_net(df, [2])
-        tri = logic.get_tri_ptf(df, engine, [2])
+        cto_df = df.query("ptf_id == 2")
+        quote_df = db.get_product_quotes(engine, 2, start_date)
+        last = quote_df.iloc[0]['cot_prix']
+        capital = logic.get_total_wealth(cto_df)
+        perf = logic.get_market_perf(cto_df)
+        invested_capital = cto_df['capital_investi'].sum()
+        net_capital = logic.get_net_capital(df, [2])
+        tri = logic.get_portfolio_tri(df, engine, [2])
 
         st.markdown("<h2 style='text-align: center;'>CTO : GOLD</h2>", unsafe_allow_html=True)
 
@@ -350,78 +350,78 @@ match choix_global:
         with col4:
             st.metric(
                 label="Capital net",
-                value=f"{capital_net[2]:,.0f} €".replace(",", " "),
+                value=f"{net_capital[2]:,.0f} €".replace(",", " "),
                 help="Capital net d'impots : 18.6 %"
             )
         with col5:
             st.metric(
                 label="Capital injecté",
-                value=f"{cap_injecte:,.0f} €".replace(",", " ")
+                value=f"{invested_capital:,.0f} €".replace(",", " ")
             )
 
         st.divider()
 
         # JOURNAL DE BORD — KPIs par enveloppe sur la période sélectionnée (réactif au slider)
-        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {duree}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {period}</h4>", unsafe_allow_html=True)
     
-        mapping_ptf = {2: "CTO"}
-        perf_ptf = logic.get_perf_ptf_periode(df_histo, df_periode, duree, date_debut, mapping_ptf)
-        injecte = logic.get_injecte_periode(df_histo, df_periode, duree, date_debut, [2, 8])
-        haut = df_cotation.iloc[0]['max']
-        bas = df_cotation.iloc[0]['min']
+        portfolio_name_map = {2: "CTO"}
+        perf_portfolio = logic.get_portfolio_period_perf(history_df, period_df, period, start_date, portfolio_name_map)
+        invested = logic.get_period_invested(history_df, period_df, period, start_date, [2, 8])
+        high = quote_df.iloc[0]['max']
+        low = quote_df.iloc[0]['min']
 
         col6, col7, col8, col9 = st.columns(4)
 
         with col6:
             st.metric(
                 label="Performance",
-                value=f"{perf_ptf['CTO']['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_ptf['CTO']['pct']:.0f} %"
+                value=f"{perf_portfolio['CTO']['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_portfolio['CTO']['pct']:.0f} %"
             )
         with col7:
             st.metric(
                 label="Haut",
-                value=f"{haut:,.2f} €".replace(",", " "),
+                value=f"{high:,.2f} €".replace(",", " "),
                 help="Cours le plus haut sur"
             )
         with col8:
             st.metric(
                 label="Bas",
-                value=f"{bas:,.2f} €".replace(",", " "),
+                value=f"{low:,.2f} €".replace(",", " "),
                 help="Cours le plus bas"
             )
         with col9:
             st.metric(
                 label="Injecté",
-                value=f"{injecte:,.0f} €".replace(",", " "),
+                value=f"{invested:,.0f} €".replace(",", " "),
                 help="Somme des dépots sur la periode"
             )
 
         # GRAPHIQUES — (réactif au slider)
 
         # Lineplot global
-        df_apports = df_apports_pdt.query("pdt_id == 8")
-        mapping_tableau = {2: "CTO"}
-        df_tableau, df_tableau_buffer      = logic.get_tableau_mensuel_ptf(df_histo, df_apports, duree, mapping_tableau)
-        df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, df_apports, duree)
+        contributions_df = contributions_product_df.query("pdt_id == 8")
+        table_group_map = {2: "CTO"}
+        table_df, table_buffer_df      = logic.get_monthly_table_by_portfolio(history_df, contributions_df, period, table_group_map)
+        contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, contributions_df, period)
 
-        if duree not in ("1 Mois", "15 Jours", "Début Mois"):
-            fig_global = charts.make_graph_global(df_apports_graph, df_capital_graph)
+        if period not in ("1 Mois", "15 Jours", "Début Mois"):
+            fig_global = charts.make_global_chart(contributions_chart_df, capital_chart_df)
             st.plotly_chart(fig_global, width='stretch')
 
 
 # DASH STEF
 
     case "STEF":
-        df_stef = df.query("ptf_id == 3")
-        df_cotation = db.get_cotations_pdt(engine, 3, date_debut)
-        last = df_cotation.iloc[0]['cot_prix']
-        capital = logic.get_patrimoine_total(df_stef)
-        abondement = df_stef["abondement_recu"].sum()
-        perf = logic.get_perf_marches(df_stef)
-        cap_injecte = df_stef['capital_investi'].sum()
-        capital_net = logic.get_capital_net(df, [3])
-        tri = logic.get_tri_ptf(df, engine, [3])
+        stef_df = df.query("ptf_id == 3")
+        quote_df = db.get_product_quotes(engine, 3, start_date)
+        last = quote_df.iloc[0]['cot_prix']
+        capital = logic.get_total_wealth(stef_df)
+        employer_match = stef_df["abondement_recu"].sum()
+        perf = logic.get_market_perf(stef_df)
+        invested_capital = stef_df['capital_investi'].sum()
+        net_capital = logic.get_net_capital(df, [3])
+        tri = logic.get_portfolio_tri(df, engine, [3])
 
         st.markdown("<h2 style='text-align: center;'>PEE : STEF</h2>", unsafe_allow_html=True)
 
@@ -458,91 +458,91 @@ match choix_global:
         with col4:
             st.metric(
                 label="Capital net",
-                value=f"{capital_net[3]:,.0f} €".replace(",", " "),
+                value=f"{net_capital[3]:,.0f} €".replace(",", " "),
                 help="Capital net d'impots : 18.6 %"
             )
         with col5:
             st.metric(
                 label="Capital injecté",
-                value=f"{cap_injecte:,.0f} €".replace(",", " ")
+                value=f"{invested_capital:,.0f} €".replace(",", " ")
             )
         with col6:
             st.metric(
                 label="Abondement reçu",
-                value=f"{abondement:,.0f} €".replace(",", " ")
+                value=f"{employer_match:,.0f} €".replace(",", " ")
             )
 
         st.divider()
 
         # JOURNAL DE BORD — KPIs par enveloppe sur la période sélectionnée (réactif au slider)
-        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {duree}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {period}</h4>", unsafe_allow_html=True)
     
-        mapping_ptf = {3: "STEF"}
-        perf_ptf = logic.get_perf_ptf_periode(df_histo, df_periode, duree, date_debut, mapping_ptf)
-        injecte = logic.get_injecte_periode(df_histo, df_periode, duree, date_debut, [3])
-        haut = df_cotation.iloc[0]['max']
-        bas = df_cotation.iloc[0]['min']
+        portfolio_name_map = {3: "STEF"}
+        perf_portfolio = logic.get_portfolio_period_perf(history_df, period_df, period, start_date, portfolio_name_map)
+        invested = logic.get_period_invested(history_df, period_df, period, start_date, [3])
+        high = quote_df.iloc[0]['max']
+        low = quote_df.iloc[0]['min']
 
         col7, col8, col9, col10 = st.columns(4)
 
         with col7:
             st.metric(
                 label="Performance",
-                value=f"{perf_ptf['STEF']['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_ptf['STEF']['pct']:.0f} %"
+                value=f"{perf_portfolio['STEF']['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_portfolio['STEF']['pct']:.0f} %"
             )
         with col8:
             st.metric(
                 label="Injecté",
-                value=f"{injecte:,.0f} €".replace(",", " "),
+                value=f"{invested:,.0f} €".replace(",", " "),
                 help="Somme des dépots sur la periode"
             )
         with col9:
             st.metric(
                 label="Haut",
-                value=f"{haut:,.2f} €".replace(",", " "),
+                value=f"{high:,.2f} €".replace(",", " "),
                 help="Cours le plus haut sur"
             )
         with col10:
             st.metric(
                 label="Bas",
-                value=f"{bas:,.2f} €".replace(",", " "),
+                value=f"{low:,.2f} €".replace(",", " "),
                 help="Cours le plus bas"
             )
             
         # GRAPHIQUES — (réactif au slider)
 
         # Lineplot global
-        df_apports = df_apports_pdt.query("pdt_id == 3")
-        mapping_tableau = {3: "STEF"}
-        df_tableau, df_tableau_buffer      = logic.get_tableau_mensuel_ptf(df_histo, df_apports, duree, mapping_tableau)
-        df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, df_apports, duree)
+        contributions_df = contributions_product_df.query("pdt_id == 3")
+        table_group_map = {3: "STEF"}
+        table_df, table_buffer_df      = logic.get_monthly_table_by_portfolio(history_df, contributions_df, period, table_group_map)
+        contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, contributions_df, period)
 
-        if duree not in ("1 Mois", "15 Jours", "Début Mois"):
-            fig_global = charts.make_graph_global(df_apports_graph, df_capital_graph)
+        if period not in ("1 Mois", "15 Jours", "Début Mois"):
+            fig_global = charts.make_global_chart(contributions_chart_df, capital_chart_df)
             st.plotly_chart(fig_global, width='stretch')
 
 
 # DASH CiC
 
     case "CiC":
-        df_cic = df.query("ptf_id == 4")
-        df_cotation = db.get_cotations_pdt(engine, 4, date_debut)
-        capital = logic.get_patrimoine_total(df_cic)
-        abondement = df_cic["abondement_recu"].sum()
-        perf = logic.get_perf_marches(df_cic)
-        cap_injecte = df_cic['capital_investi'].sum()
-        capital_net = logic.get_capital_net(df, [4, 5, 6])
-        tri = logic.get_tri_ptf(df, engine, [4])
+        cic_df = df.query("ptf_id == 4")
+        quote_df = db.get_product_quotes(engine, 4, start_date)
+        capital = logic.get_total_wealth(cic_df)
+        employer_match = cic_df["abondement_recu"].sum()
+        perf = logic.get_market_perf(cic_df)
+        invested_capital = cic_df['capital_investi'].sum()
+        net_capital = logic.get_net_capital(df, [4, 5, 6])
+        tri = logic.get_portfolio_tri(df, engine, [4])
 
         # DONUTS — Préparation des DataFrames filtrés par enveloppe
-        df_donut = df.query("pdt_id in [4, 5, 6]").groupby('pdt_id')['capital_actuel'].sum().reset_index()
-        df_donut['nom_pour_legende'] = df_donut['pdt_id'].map({4: "Obligation", 5: "Equilibre", 6: "Stratégie"})
+        donut_df = df.query("pdt_id in [4, 5, 6]").groupby('pdt_id')['capital_actuel'].sum().reset_index()
+        donut_df['legend_label'] = donut_df['pdt_id'].map({4: "Obligation", 5: "Equilibre", 6: "Stratégie"})
 
         fig = charts.make_donuts(
-        df=df_donut, names='nom_pour_legende', values='capital_actuel',
+        df=donut_df, names='legend_label', values='capital_actuel',
         color_discrete_map={"Obligation": "#018289", "Equilibre": "#0f228b", "Stratégie": "#fe330f"},
-        rotation=175, labels="Poids CiC", taille=194
+        rotation=175, center_label="Poids CiC", height=194
         )
 
         st.markdown("<h2 style='text-align: center;'>PEE : CiC</h2>", unsafe_allow_html=True)
@@ -559,7 +559,7 @@ match choix_global:
             )
             st.metric(
                 label="Capital net",
-                value=f"{sum(capital_net.values()):,.0f} €".replace(",", " "),
+                value=f"{sum(net_capital.values()):,.0f} €".replace(",", " "),
                 help="Capital net d'impots : 18.6 %"
             )
         with col2:
@@ -570,7 +570,7 @@ match choix_global:
             )
             st.metric(
                 label="Capital injecté",
-                value=f"{cap_injecte:,.0f} €".replace(",", " ")
+                value=f"{invested_capital:,.0f} €".replace(",", " ")
             )
         with col3:
             st.metric(
@@ -580,7 +580,7 @@ match choix_global:
             )
             st.metric(
                 label="Abondement reçu",
-                value=f"{abondement:,.0f} €".replace(",", " ")
+                value=f"{employer_match:,.0f} €".replace(",", " ")
             )
 
         with col4: st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
@@ -588,114 +588,114 @@ match choix_global:
         st.divider()
 
         # KPIs GÉNÉRAUX — Capital total + perfs globales par ENVELOPPES (hors période)
-        perf_pdt_max = logic.get_perf_pdt_periode(df_histo_pdt, df_periode_pdt, duree='Max', date_debut=None, liste_pdt=[4, 5, 6])
-        tri_pdt = logic.get_tri_pdt(df, engine, [4, 5, 6])
+        perf_product_max = logic.get_product_period_perf(history_product_df, period_product_df, period='Max', start_date=None, product_ids=[4, 5, 6])
+        tri_product = logic.get_product_tri(df, engine, [4, 5, 6])
 
         col5, col6, col7 = st.columns(3)
         
         with col5:
             st.metric(
                 label="Performance Obligation",
-                value=f"{perf_pdt_max[4]['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_pdt_max[4]['pct']:.0f} %"
+                value=f"{perf_product_max[4]['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_product_max[4]['pct']:.0f} %"
             )
             st.metric(
                 label="Performance Annualisée",
-                value=f"{tri_pdt[4]:.1f} %",
+                value=f"{tri_product[4]:.1f} %",
             )
         with col6:
             st.metric(
                 label="Performance Equilibre",
-                value=f"{perf_pdt_max[5]['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_pdt_max[5]['pct']:.0f} %"
+                value=f"{perf_product_max[5]['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_product_max[5]['pct']:.0f} %"
             )
             st.metric(
                 label="Performance Annualisée",
-                value=f"{tri_pdt[5]:.1f} %",
+                value=f"{tri_product[5]:.1f} %",
             )
         with col7:
             st.metric(
                 label="Performance Stratégie",
-                value=f"{perf_pdt_max[6]['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_pdt_max[6]['pct']:.0f} %"
+                value=f"{perf_product_max[6]['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_product_max[6]['pct']:.0f} %"
             )
             st.metric(
                 label="Performance Annualisée",
-                value=f"{tri_pdt[6]:.1f} %",
+                value=f"{tri_product[6]:.1f} %",
             )
         
         st.divider()
 
         # JOURNAL DE BORD — KPIs par enveloppe sur la période sélectionnée (réactif au slider)
-        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {duree}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {period}</h4>", unsafe_allow_html=True)
     
-        perf_ptf = logic.get_perf_pdt_periode(df_histo_pdt, df_periode_pdt, duree, date_debut, [4, 5, 6], aggregate=True)
-        perf_pdt = logic.get_perf_pdt_periode(df_histo_pdt, df_periode_pdt, duree, date_debut, [4, 5, 6])
+        perf_portfolio = logic.get_product_period_perf(history_product_df, period_product_df, period, start_date, [4, 5, 6], aggregate=True)
+        perf_product = logic.get_product_period_perf(history_product_df, period_product_df, period, start_date, [4, 5, 6])
 
         col8, col9, col10, col11 = st.columns(4)
 
         with col8:
             st.metric(
                 label="Performance CiC",
-                value=f"{perf_ptf['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_ptf['pct']:.0f} %"
+                value=f"{perf_portfolio['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_portfolio['pct']:.0f} %"
             )
         with col9:
             st.metric(
                 label="Performance Obligation",
-                value=f"{perf_pdt[4]['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_pdt[4]['pct']:.0f} %"
+                value=f"{perf_product[4]['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_product[4]['pct']:.0f} %"
             )
         with col10:
             st.metric(
                 label="Performance Equilibre",
-                value=f"{perf_pdt[5]['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_pdt[5]['pct']:.0f} %"
+                value=f"{perf_product[5]['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_product[5]['pct']:.0f} %"
             )
         with col11:
             st.metric(
                 label="Performance Stratégie",
-                value=f"{perf_pdt[6]['euro']:,.0f} €".replace(",", " "),
-                delta=f"{perf_pdt[6]['pct']:.0f} %"
+                value=f"{perf_product[6]['euro']:,.0f} €".replace(",", " "),
+                delta=f"{perf_product[6]['pct']:.0f} %"
             )
 
         # GRAPHIQUES — (réactif au slider)
 
         # Lineplot global
-        df_apports = df_apports_pdt.query("pdt_id in (4, 5, 6, 9)").groupby('mois')['injecte'].sum().reset_index()
-        mapping_tableau = {4: "CiC"}
-        df_tableau, df_tableau_buffer      = logic.get_tableau_mensuel_ptf(df_histo, df_apports, duree, mapping_tableau)
-        df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, df_apports, duree)
+        contributions_df = contributions_product_df.query("pdt_id in (4, 5, 6, 9)").groupby('mois')['injecte'].sum().reset_index()
+        table_group_map = {4: "CiC"}
+        table_df, table_buffer_df      = logic.get_monthly_table_by_portfolio(history_df, contributions_df, period, table_group_map)
+        contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, contributions_df, period)
 
         # Lineplot detaillé
-        df_apports_obli = df_apports_pdt.query("pdt_id == 4").reset_index()
-        df_apports_equi = df_apports_pdt.query("pdt_id == 5").reset_index()
-        df_apports_strat = df_apports_pdt.query("pdt_id == 6").reset_index()
+        contributions_bond_df = contributions_product_df.query("pdt_id == 4").reset_index()
+        contributions_balanced_df = contributions_product_df.query("pdt_id == 5").reset_index()
+        contributions_strategy_df = contributions_product_df.query("pdt_id == 6").reset_index()
 
-        df_tableau_obli, df_tableau_buffer_obli = logic.get_tableau_mensuel_pdt(df_histo, df_apports_obli, duree, {4: "Obligation"})
-        df_tableau_equi, df_tableau_buffer_equi = logic.get_tableau_mensuel_pdt(df_histo, df_apports_equi, duree, {5: "Equilibre"})
-        df_tableau_strat, df_tableau_buffer_strat = logic.get_tableau_mensuel_pdt(df_histo, df_apports_strat, duree, {6: "Stratégie"})
+        table_bond_df, table_buffer_bond_df = logic.get_monthly_table_by_product(history_df, contributions_bond_df, period, {4: "Obligation"})
+        table_balanced_df, table_buffer_balanced_df = logic.get_monthly_table_by_product(history_df, contributions_balanced_df, period, {5: "Equilibre"})
+        table_strategy_df, table_buffer_strategy_df = logic.get_monthly_table_by_product(history_df, contributions_strategy_df, period, {6: "Stratégie"})
 
-        df_graph_obli = df_tableau_buffer_obli[['Obligation', 'Evo Patrimoine', 'Perf Marchés (€)']].rename(columns={'Obligation': 'Total'})
-        df_graph_equi = df_tableau_buffer_equi[['Equilibre', 'Evo Patrimoine', 'Perf Marchés (€)']].rename(columns={'Equilibre': 'Total'})
-        df_graph_strat = df_tableau_buffer_strat[['Stratégie', 'Evo Patrimoine', 'Perf Marchés (€)']].rename(columns={'Stratégie': 'Total'})
+        chart_bond_df = table_buffer_bond_df[['Obligation', 'Evo Patrimoine', 'Perf Marchés (€)']].rename(columns={'Obligation': 'Total'})
+        chart_balanced_df = table_buffer_balanced_df[['Equilibre', 'Evo Patrimoine', 'Perf Marchés (€)']].rename(columns={'Equilibre': 'Total'})
+        chart_strategy_df = table_buffer_strategy_df[['Stratégie', 'Evo Patrimoine', 'Perf Marchés (€)']].rename(columns={'Stratégie': 'Total'})
 
-        df_inj_obli, df_capital_obli = logic.get_donnees_graph(df_graph_obli, df_apports_obli, duree)
-        df_inj_equi, df_capital_equil = logic.get_donnees_graph(df_graph_equi, df_apports_equi, duree)
-        df_inj_strat, df_capital_strat = logic.get_donnees_graph(df_graph_strat, df_apports_strat, duree)   
+        contributions_chart_bond_df, capital_bond_df = logic.get_chart_data(chart_bond_df, contributions_bond_df, period)
+        contributions_chart_balanced_df, capital_balanced_df = logic.get_chart_data(chart_balanced_df, contributions_balanced_df, period)
+        contributions_chart_strategy_df, capital_strategy_df = logic.get_chart_data(chart_strategy_df, contributions_strategy_df, period)   
 
-        if duree not in ("1 Mois", "15 Jours", "Début Mois"):
-            if not vue_detail:
-                fig_global = charts.make_graph_global(df_apports_graph, df_capital_graph)
+        if period not in ("1 Mois", "15 Jours", "Début Mois"):
+            if not show_detail:
+                fig_global = charts.make_global_chart(contributions_chart_df, capital_chart_df)
                 st.plotly_chart(fig_global, width='stretch')
             else:
                 tab1, tab2, tab3 = st.tabs(["Obligation", "Equilibre", "Stratégie"])
                 with tab1:
-                    fig_global = charts.make_graph_global(df_inj_obli, df_capital_obli)
+                    fig_global = charts.make_global_chart(contributions_chart_bond_df, capital_bond_df)
                     st.plotly_chart(fig_global, width='stretch')
                 with tab2:
-                    fig_global = charts.make_graph_global(df_inj_equi, df_capital_equil)
+                    fig_global = charts.make_global_chart(contributions_chart_balanced_df, capital_balanced_df)
                     st.plotly_chart(fig_global, width='stretch')
                 with tab3:
-                    fig_global = charts.make_graph_global(df_inj_strat, df_capital_strat)
+                    fig_global = charts.make_global_chart(contributions_chart_strategy_df, capital_strategy_df)
                     st.plotly_chart(fig_global, width='stretch')

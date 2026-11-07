@@ -29,14 +29,14 @@ def get_view(view_name, _engine):
     return df
 
 
-def get_cotations_pdt(engine, pdt_id, date_debut):
+def get_product_quotes(engine, product_id, start_date):
     """
     Récupère le cours actuel et les extremes de prix sur la période sélectionnée.
 
     Args:
         engine: connexion SQLAlchemy
         pdt_id (int): id du produit financier
-        date_debut (pd.Timestamp): date de début de la période (depuis get_date_debut())
+        start_date (pd.Timestamp): date de début de la période (depuis get_start_date())
 
     Returns:
         DataFrame: une ligne avec [max, min, cot_date, cot_prix]
@@ -50,7 +50,7 @@ def get_cotations_pdt(engine, pdt_id, date_debut):
             FROM cotation_cot
             WHERE 
                 pdt_id = %(pdt_id)s
-                AND cot_date >= %(date_debut)s
+                AND cot_date >= %(start_date)s
         ),
         dernier AS (
             -- Dernière cotation connue (pas de filtre période)
@@ -72,10 +72,10 @@ def get_cotations_pdt(engine, pdt_id, date_debut):
         CROSS JOIN slider s
         WHERE rn = 1
     """
-    df_cotation = pd.read_sql(query, engine, params={"pdt_id": pdt_id, "date_debut": date_debut})
+    quote_df = pd.read_sql(query, engine, params={"pdt_id": product_id, "start_date": start_date})
     cols = ['min', 'max', 'cot_prix']
-    df_cotation[cols] = df_cotation[cols].astype(float)
-    df_cotation['min'] = df_cotation['min'].fillna(df_cotation['cot_prix'])
-    df_cotation['max'] = df_cotation['max'].fillna(df_cotation['cot_prix'])
+    quote_df[cols] = quote_df[cols].astype(float)
+    quote_df['min'] = quote_df['min'].fillna(quote_df['cot_prix'])
+    quote_df['max'] = quote_df['max'].fillna(quote_df['cot_prix'])
 
-    return df_cotation
+    return quote_df

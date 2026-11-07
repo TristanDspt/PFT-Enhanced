@@ -44,17 +44,17 @@ with st.sidebar:
     st.title("⚙️ Menu")
 
     # Choix de l'enveloppe
-    choix_global = st.sidebar.radio("Menu", ["", "PEA", "CTO", "STEF", "CiC"], label_visibility="collapsed")
+    selected_view = st.sidebar.radio("Menu", ["", "PEA", "CTO", "STEF", "CiC"], label_visibility="collapsed")
 
     st.divider()
 
     # Slider de période — contrôle tous les blocs réactifs de la page
     st.subheader("🛠️ Configuration")
-    duree = st.select_slider(
+    period = st.select_slider(
         "Période d'analyse",
         options=["Début Mois", "1 Mois", "3 Mois", "6 Mois", "1 An", "3 Ans", "5 Ans", "Max"],
         value="6 Mois"
     )
     # Toggle pour afficher les graphs détaillés sur le desh CiC
-    if choix_global == "CiC":
-        vue_detail = st.toggle("Vue détaillée", value=False)
+    if selected_view == "CiC":
+        show_detail = st.toggle("Vue détaillée", value=False)

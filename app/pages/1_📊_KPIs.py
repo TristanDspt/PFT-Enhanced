@@ -51,9 +51,9 @@ engine = db.get_engine()
 
 # Les quatre vues SQL sont la source de toutes les données de l'app
 df             = db.get_view("view_global_portefeuille", engine)      # snapshot instantané
-df_histo       = db.get_view("view_historique_portefeuille", engine)  # historique quotidien par ptf_id
-df_histo_pdt   = db.get_view("view_historique_pdt", engine)           # historique quotidien par pdt_id
-df_apports     = db.get_view("view_apports_mensuels", engine)         # flux cash mensuels
+history_df       = db.get_view("view_historique_portefeuille", engine)  # historique quotidien par ptf_id
+history_product_df   = db.get_view("view_historique_pdt", engine)           # historique quotidien par pdt_id
+contributions_df     = db.get_view("view_apports_mensuels", engine)         # flux cash mensuels
 
 
 # --- 3. SIDEBAR ---
@@ -74,50 +74,50 @@ with st.sidebar:
 
     # Slider de période — contrôle tous les blocs réactifs de la page
     st.subheader("🛠️ Configuration")
-    duree = st.select_slider(
+    period = st.select_slider(
         "Période d'analyse",
         options=["Début Mois", "1 Mois", "3 Mois", "6 Mois", "1 An", "3 Ans", "5 Ans", "Max"],
         value="6 Mois"
     )
     # Toggle pour afficher les colonnes d'évolution sur 12 mois glissants dans le tableau
-    vue_12m = st.toggle("12 mois roulants", value=False)
+    show_12m = st.toggle("12 mois roulants", value=False)
 
 
 # --- 4. CALCULS GÉNÉRAUX (indépendants de la période) ---
 # Ces valeurs ne changent pas quand on bouge le slider
 
-capital      = logic.get_patrimoine_total(df)
-perf_marches = logic.get_perf_marches(df)
-df_etf       = df.query("ptf_id in (1, 2)")
-perf_etf     = logic.get_perf_marches(df_etf)
-poids        = logic.get_poids_enveloppes(df)
-tri_global   = logic.get_tri_ptf(df, engine, [1, 2, 3, 4])
+capital      = logic.get_total_wealth(df)
+market_perf = logic.get_market_perf(df)
+etf_df       = df.query("ptf_id in (1, 2)")
+perf_etf     = logic.get_market_perf(etf_df)
+weights       = logic.get_account_weights(df)
+tri_global   = logic.get_portfolio_tri(df, engine, [1, 2, 3, 4])
 
 
 # --- 5. LOGIQUE TEMPORELLE (réactive au slider) ---
 # Ces valeurs sont recalculées à chaque changement de période
 
-date_debut     = logic.get_date_debut(duree)
-df_periode     = logic.get_df_periode(df_histo, date_debut)
-df_periode_pdt = logic.get_df_periode(df_histo_pdt, date_debut)
+start_date     = logic.get_start_date(period)
+period_df     = logic.get_period_df(history_df, start_date)
+period_product_df = logic.get_period_df(history_product_df, start_date)
 # Mapping ptf_id → nom affiché
-mapping_ptf  = {1: "PEA", 2: "CTO", 3: "STEF"}
-perf_ptf     = logic.get_perf_ptf_periode(df_histo, df_periode, duree, date_debut, mapping_ptf)
-perf_globale = logic.get_perf_pdt_periode(df_histo_pdt, df_periode_pdt, duree, date_debut, [1,2,3,4,5,6], aggregate=True)
-perf_cic     = logic.get_perf_pdt_periode(df_histo_pdt, df_periode_pdt, duree, date_debut, [4, 5, 6], aggregate=True)
+portfolio_name_map  = {1: "PEA", 2: "CTO", 3: "STEF"}
+perf_portfolio     = logic.get_portfolio_period_perf(history_df, period_df, period, start_date, portfolio_name_map)
+perf_overall = logic.get_product_period_perf(history_product_df, period_product_df, period, start_date, [1,2,3,4,5,6], aggregate=True)
+perf_cic     = logic.get_product_period_perf(history_product_df, period_product_df, period, start_date, [4, 5, 6], aggregate=True)
 
-# Le tableau doit être calculé avant le graph — get_donnees_graph dépend de df_tableau_buffer
-# df_tableau_buffer : version avec mois de buffer, pour le calcul de perf_graph via shift(1)
+# Le tableau doit être calculé avant le graph — get_chart_data dépend de table_buffer_df
+# table_buffer_df : version avec mois de buffer, pour le calcul de perf_graph via shift(1)
 # Mapping ptf_id → enveloppe pour regrouper les lignes
-mapping_tableau = {
+table_group_map = {
     1: "ETF",
     2: "ETF",
     3: "STEF",
     4: "CiC",
     6: "Livrets",
 }
-df_tableau, df_tableau_buffer      = logic.get_tableau_mensuel_ptf(df_histo, df_apports, duree, mapping_tableau)
-df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, df_apports, duree)
+table_df, table_buffer_df      = logic.get_monthly_table_by_portfolio(history_df, contributions_df, period, table_group_map)
+contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, contributions_df, period)
 
 
 # --- 6. INTERFACE GRAPHIQUE ---
@@ -137,8 +137,8 @@ with col1:
 with col2:
     st.metric(
         label="Performance Marchés",
-        value=f"{perf_marches['pct']:.0f} %",
-        delta=f"{perf_marches['euro']:,.0f} €".replace(",", " "),
+        value=f"{market_perf['pct']:.0f} %",
+        delta=f"{market_perf['euro']:,.0f} €".replace(",", " "),
         help="Rendement total par rapport au capital investi (Hors livrets d'épargne)"
     )
 with col3:
@@ -149,30 +149,30 @@ with col3:
     )
 
 # DONUTS — Préparation des DataFrames filtrés par enveloppe
-df_etf_donut = df.query("ptf_id in [1, 2]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
-df_etf_donut['nom_pour_legende'] = df_etf_donut['ptf_id'].map({1: "S&P 500", 2: "Gold"})
+etf_donut_df = df.query("ptf_id in [1, 2]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
+etf_donut_df['legend_label'] = etf_donut_df['ptf_id'].map({1: "S&P 500", 2: "Gold"})
 
-df_pee_donut = df.query("ptf_id in [3, 4]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
-df_pee_donut['nom_pour_legende'] = df_pee_donut['ptf_id'].map({3: "STEF", 4: "CiC"})
+pee_donut_df = df.query("ptf_id in [3, 4]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
+pee_donut_df['legend_label'] = pee_donut_df['ptf_id'].map({3: "STEF", 4: "CiC"})
 
-df_liv_donut = df.query("pdt_id in [10, 11]").groupby('pdt_id')['capital_actuel'].sum().reset_index()
-df_liv_donut['nom_pour_legende'] = df_liv_donut['pdt_id'].map({10: "Livret A", 11: "LEP"})
+savings_donut_df = df.query("pdt_id in [10, 11]").groupby('pdt_id')['capital_actuel'].sum().reset_index()
+savings_donut_df['legend_label'] = savings_donut_df['pdt_id'].map({10: "Livret A", 11: "LEP"})
 
 # Création des 3 donuts via st_charts (même fonction, params différents)
 fig_etf = charts.make_donuts(
-    df=df_etf_donut, names='nom_pour_legende', values='capital_actuel',
+    df=etf_donut_df, names='legend_label', values='capital_actuel',
     color_discrete_map={"S&P 500": "#822A2A", "Gold": "#D3AF37"},
-    rotation=50, labels="Poids ETF", poids=poids['etf']
+    rotation=50, center_label="Poids ETF", weight=weights['etf']
 )
 fig_pee = charts.make_donuts(
-    df=df_pee_donut, names='nom_pour_legende', values='capital_actuel',
+    df=pee_donut_df, names='legend_label', values='capital_actuel',
     color_discrete_map={"STEF": "#00519e", "CiC": "#018289"},
-    rotation=80, labels="Poids PEE", poids=poids['pee']
+    rotation=80, center_label="Poids PEE", weight=weights['pee']
 )
 fig_liv = charts.make_donuts(
-    df=df_liv_donut, names='nom_pour_legende', values='capital_actuel',
+    df=savings_donut_df, names='legend_label', values='capital_actuel',
     color_discrete_map={"Livret A": "#FF8C00", "LEP": "#540A88"},
-    rotation=10, labels="Poids Livrets", poids=poids['livret']
+    rotation=10, center_label="Poids Livrets", weight=weights['savings']
 )
 
 col4, col5, col6 = st.columns(3)
@@ -183,33 +183,33 @@ with col6: st.plotly_chart(fig_liv, width='stretch', config={'displayModeBar': F
 st.divider()
 
 # JOURNAL DE BORD — KPIs par enveloppe sur la période sélectionnée (réactif au slider)
-st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {duree}</h4>", unsafe_allow_html=True)
+st.markdown(f"<h4 style='text-align: center; margin-top: -20px; margin-bottom: 15px;'>📅 Journal de bord : {period}</h4>", unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
         label="Performance Globale",
-        value=f"{perf_globale['euro']:,.0f} €".replace(",", " "),
-        delta=f"{perf_globale['pct']:.0f} %"
+        value=f"{perf_overall['euro']:,.0f} €".replace(",", " "),
+        delta=f"{perf_overall['pct']:.0f} %"
     )
 with col2:
     st.metric(
         label="Performance PEA",
-        value=f"{perf_ptf['PEA']['euro']:,.0f} €".replace(",", " "),
-        delta=f"{perf_ptf['PEA']['pct']:.0f} %"
+        value=f"{perf_portfolio['PEA']['euro']:,.0f} €".replace(",", " "),
+        delta=f"{perf_portfolio['PEA']['pct']:.0f} %"
     )
 with col3:
     st.metric(
         label="Performance CTO",
-        value=f"{perf_ptf['CTO']['euro']:,.0f} €".replace(",", " "),
-        delta=f"{perf_ptf['CTO']['pct']:.0f} %"
+        value=f"{perf_portfolio['CTO']['euro']:,.0f} €".replace(",", " "),
+        delta=f"{perf_portfolio['CTO']['pct']:.0f} %"
     )
 with col4:
     st.metric(
         label="Performance STEF",
-        value=f"{perf_ptf['STEF']['euro']:,.0f} €".replace(",", " "),
-        delta=f"{perf_ptf['STEF']['pct']:.0f} %"
+        value=f"{perf_portfolio['STEF']['euro']:,.0f} €".replace(",", " "),
+        delta=f"{perf_portfolio['STEF']['pct']:.0f} %"
     )
 with col5:
     st.metric(
@@ -220,44 +220,44 @@ with col5:
 
 # TABLEAU MENSUEL
 # La traduction des mois en français et le formatage restent ici — c'est du pur affichage
-mois_fr = {
+french_months = {
     1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
     5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
     9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
 }
 
-df_affichage = df_tableau.copy()
+display_df = table_df.copy()
 
 # Colonnes 12m roulants — ajoutées uniquement si le toggle est activé
-if not vue_12m:
-    df_affichage = df_affichage.drop(columns=['Evo 12m (€)', 'Evo 12m (%)'])
+if not show_12m:
+    display_df = display_df.drop(columns=['Evo 12m (€)', 'Evo 12m (%)'])
 
 # Traduction de l'index datetime en label lisible (ex: "Octobre 2025")
-df_affichage.index = df_affichage.index.map(lambda x: f"{mois_fr[x.month]} {x.year}")
+display_df.index = display_df.index.map(lambda x: f"{french_months[x.month]} {x.year}")
 
 # Format d'affichage complet — on filtre ensuite sur les colonnes réellement présentes
-format_complet = {
+full_format = {
     'ETF': "{:,.2f} €", 'STEF': "{:,.2f} €", 'CiC': "{:,.2f} €",
     'Livrets': "{:,.2f} €", 'Total': "{:,.2f} €", 'Evo Patrimoine': "{:,.2f} €",
     'Perf Marchés (€)': "{:,.2f} €", 'Perf Marchés (%)': "{:,.2f} %", 'Evo 12m (€)': "{:,.0f} €",
     'Evo (%)': "{:.2f} %", 'Evo 12m (%)': "{:.1f} %"
 }
-format_filtre = {k: v for k, v in format_complet.items() if k in df_affichage.columns}
+filtered_format = {k: v for k, v in full_format.items() if k in display_df.columns}
 
 st.dataframe(
-    df_affichage.style
-    .format(format_filtre, na_rep='-', thousands=" ")
+    display_df.style
+    .format(filtered_format, na_rep='-', thousands=" ")
     # Coloration conditionnelle : rouge si négatif, vert si positif
     .map(
         lambda x: 'color: #ff4b4b' if x < 0 else 'color: #09ab3b',
-        subset=[c for c in ['Evo Patrimoine', 'Evo (%)', 'Perf Marchés (€)', 'Perf Marchés (%)'] if c in df_affichage.columns]
+        subset=[c for c in ['Evo Patrimoine', 'Evo (%)', 'Perf Marchés (€)', 'Perf Marchés (%)'] if c in display_df.columns]
     ),
     column_config={"Mois": st.column_config.Column(width=140)},
     width='stretch',
-    height=min(35 * len(df_affichage) + 38, 458)  # hauteur dynamique selon le nombre de lignes
+    height=min(35 * len(display_df) + 38, 458)  # hauteur dynamique selon le nombre de lignes
 )
 
 # GRAPHIQUE GLOBAL — masqué sur les courtes périodes (pas assez de points pour être lisible)
-if duree not in ("1 Mois", "Début Mois"):
-    fig_global = charts.make_graph_global(df_apports_graph, df_capital_graph)
+if period not in ("1 Mois", "Début Mois"):
+    fig_global = charts.make_global_chart(contributions_chart_df, capital_chart_df)
     st.plotly_chart(fig_global, width='stretch')

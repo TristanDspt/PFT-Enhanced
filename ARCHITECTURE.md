@@ -208,44 +208,44 @@ Le schéma est dans `db/schema/Create_DB_PFT.sql` (4 tables : portefeuille, prod
 
 | Fonction | Entrée | Sortie |
 | :--- | :--- | :--- |
-| `get_patrimoine_total(df)` | df | `float` |
-| `get_perf_marches(df)` | df | `dict {euro, pct}` |
-| `get_poids_enveloppes(df)` | df | `dict {etf, pee, livret}` |
-| `get_capital_net(df, liste_pdt)` | df, list[int] | `dict {pdt_id: net}` |
-| `get_tri_ptf(df, engine, liste_ptf)` | df, engine, list | `float` |
-| `get_tri_pdt(df, engine, liste_pdt)` | df, engine, list | `dict {pdt_id: float}` |
+| `get_total_wealth(df)` | df | `float` |
+| `get_market_perf(df)` | df | `dict {euro, pct}` |
+| `get_account_weights(df)` | df | `dict {etf, pee, savings}` |
+| `get_net_capital(df, product_ids)` | df, list[int] | `dict {pdt_id: net}` |
+| `get_portfolio_tri(df, engine, portfolio_ids)` | df, engine, list | `float` |
+| `get_product_tri(df, engine, product_ids)` | df, engine, list | `dict {pdt_id: float}` |
 
-> ⚠️ `get_perf_etf` **supprimée** : doublon avec `get_perf_marches`. La perf ETF se calcule via `get_perf_marches(df.query("ptf_id in (1, 2)"))`.
+> ⚠️ `get_perf_etf` **supprimée** : doublon avec `get_market_perf`. La perf ETF se calcule via `get_market_perf(df.query("ptf_id in (1, 2)"))`.
 
-> ⚠️ `get_capital_net` prend une `liste_pdt` (`list[int]`) et retourne un `dict {pdt_id: net}`. Fiscalité par `pdt_id` : PEA / PEE 18.6 % | CTO 31.4 %. Pas d'impôt s'il n'y a pas de plus-value.
+> ⚠️ `get_net_capital` prend `product_ids` (`list[int]`) et retourne un `dict {pdt_id: net}`. Fiscalité par `pdt_id` : PEA / PEE 18.6 % | CTO 31.4 %. Pas d'impôt s'il n'y a pas de plus-value.
 
-> ⚠️ `get_tri_ptf` calcule le TRI pour une ou plusieurs **enveloppes** (`ptf_id`) → `float`.
-> `get_tri_pdt` calcule le TRI pour un ou plusieurs **produits** (`pdt_id`) → `dict {pdt_id: float}`.
+> ⚠️ `get_portfolio_tri` calcule le TRI pour une ou plusieurs **enveloppes** (`ptf_id`) → `float`.
+> `get_product_tri` calcule le TRI pour un ou plusieurs **produits** (`pdt_id`) → `dict {pdt_id: float}`.
 
 ### 2. Logique temporelle
-> Liées au slider de période. Basées sur `df_histo` et `df_apports`.
+> Liées au slider de période. Basées sur `history_df` et `contributions_df`.
 
 | Fonction | Entrée | Sortie |
 | :--- | :--- | :--- |
-| `get_nb_mois(duree)` | `str` | `int` |
-| `get_date_debut(duree)` | `str` | `pd.Timestamp` (normalisé à minuit) |
-| `get_df_periode(df_histo, date_debut)` | df_histo, date | `DataFrame` |
-| `get_perf_etf_periode(df_histo, df_periode, date_debut, duree)` | df_histo, df_periode, date, str | `dict {euro, pct}` |
-| `get_perf_ptf_periode(df_histo, df_periode, duree, date_debut, mapping)` | df_histo, df_periode, str, date, dict | `dict {nom: {euro, pct}, ...}` |
-| `get_perf_pdt_periode(df_histo_pdt, df_periode_pdt, duree, date_debut, liste_pdt, aggregate=False)` | df, df, str, date, list, bool | `dict {pdt_id: {euro, pct}}`, ou `dict {euro, pct}` si `aggregate=True` |
-| `get_injecte_periode(df_histo, df_periode, duree, date_debut, liste_pdt)` | df_histo, df_periode, str, date, list | `float` |
-| `get_tableau_mensuel_ptf(df_histo, df_apports, duree, mapping_ptf)` | df_histo, df_apports, str, dict | `tuple (df_tableau, df_tableau_buffer)` |
-| `get_tableau_mensuel_pdt(df_histo, df_apports, duree, mapping_pdt)` | df_histo, df_apports, str, dict | `tuple (df_tableau, df_tableau_buffer)` |
-| `get_donnees_graph(df_tableau_buffer, df_apports, duree)` | df_tableau_buffer, df_apports, str | `tuple (df_apports_graph, df_capital_graph)` |
+| `get_months_count(period)` | `str` | `int` |
+| `get_start_date(period)` | `str` | `pd.Timestamp` (normalisé à minuit) |
+| `get_period_df(history_df, start_date)` | history_df, date | `DataFrame` |
+| `get_etf_period_perf(history_df, period_df, start_date, period)` | history_df, period_df, date, str | `dict {euro, pct}` |
+| `get_portfolio_period_perf(history_df, period_df, period, start_date, mapping)` | history_df, period_df, str, date, dict | `dict {nom: {euro, pct}, ...}` |
+| `get_product_period_perf(history_product_df, period_product_df, period, start_date, product_ids, aggregate=False)` | df, df, str, date, list, bool | `dict {pdt_id: {euro, pct}}`, ou `dict {euro, pct}` si `aggregate=True` |
+| `get_period_invested(history_df, period_df, period, start_date, product_ids)` | history_df, period_df, str, date, list | `float` |
+| `get_monthly_table_by_portfolio(history_df, contributions_df, period, portfolio_name_map)` | history_df, contributions_df, str, dict | `tuple (table_df, table_buffer_df)` |
+| `get_monthly_table_by_product(history_df, contributions_df, period, product_group_map)` | history_df, contributions_df, str, dict | `tuple (table_df, table_buffer_df)` |
+| `get_chart_data(table_buffer_df, contributions_df, period)` | table_buffer_df, contributions_df, str | `tuple (contributions_chart_df, capital_chart_df)` |
 
-> ⚠️ `get_tableau_mensuel_ptf` et `get_tableau_mensuel_pdt` retournent un tuple :
-> - `df_tableau` : version nettoyée pour l'affichage (tri décroissant, 1er mois retiré)
-> - `df_tableau_buffer` : version avec le mois de buffer, pour `get_donnees_graph` (tri croissant, 1er mois conservé pour le calcul du `shift(1)`)
+> ⚠️ `get_monthly_table_by_portfolio` et `get_monthly_table_by_product` retournent un tuple :
+> - `table_df` : version nettoyée pour l'affichage (tri décroissant, 1er mois retiré)
+> - `table_buffer_df` : version avec le mois de buffer, pour `get_chart_data` (tri croissant, 1er mois conservé pour le calcul du `shift(1)`)
 
-> ⚠️ `get_perf_etf_periode`, `get_perf_ptf_periode`, `get_perf_pdt_periode`, `get_injecte_periode` :
-> si `snap_debut['jour'] > date_debut`, la période remonte avant le premier mouvement : elle est traitée comme « Max » (valeur totale).
+> ⚠️ `get_etf_period_perf`, `get_portfolio_period_perf`, `get_product_period_perf`, `get_period_invested` :
+> si `snap_start['jour'] > start_date`, la période remonte avant le premier mouvement : elle est traitée comme « Max » (valeur totale).
 
-> ⚠️ `get_perf_pdt_periode(..., aggregate=True)` recalcule le pourcentage sur la base totale, il ne fait pas la moyenne des pourcentages individuels.
+> ⚠️ `get_product_period_perf(..., aggregate=True)` recalcule le pourcentage sur la base totale, il ne fait pas la moyenne des pourcentages individuels.
 
 > ⚠️ Les graphiques mensuels comptent en **mois civils**, alors que les KPI du journal de bord couvrent une période glissante : les deux ne portent pas exactement sur la même fenêtre. Le mois en cours est partiel.
 
@@ -256,10 +256,10 @@ Le schéma est dans `db/schema/Create_DB_PFT.sql` (4 tables : portefeuille, prod
 | Fonction | Entrée | Sortie |
 | :--- | :--- | :--- |
 | `apply_style(fig)` | `go.Figure` | `None` (modifie en place) |
-| `make_donuts(df, names, values, color_discrete_map, rotation, labels, poids, taille)` | DataFrame + paramètres visuels | `go.Figure` |
-| `make_graph_global(df_apports_graph, df_capital_graph)` | 2 DataFrames | `go.Figure` |
+| `make_donuts(df, names, values, color_discrete_map, rotation, center_label, weight, height)` | DataFrame + paramètres visuels | `go.Figure` |
+| `make_global_chart(contributions_chart_df, capital_chart_df)` | 2 DataFrames | `go.Figure` |
 
-> ⚠️ `make_donuts` : `poids` est optionnel (défaut `None`). S'il est absent, le libellé central s'affiche sans valeur en %. Le paramètre `taille` (défaut `200`) contrôle la hauteur en pixels.
+> ⚠️ `make_donuts` : `weight` est optionnel (défaut `None`). S'il est absent, le libellé central s'affiche sans valeur en %. Le paramètre `height` (défaut `200`) contrôle la hauteur en pixels.
 
 ---
 
@@ -269,28 +269,28 @@ Le schéma est dans `db/schema/Create_DB_PFT.sql` (4 tables : portefeuille, prod
 # 1. Chargement des vues (database.py)
 engine = db.get_engine()
 df = db.get_view("view_global_portefeuille", engine)
-df_histo = db.get_view("view_historique_portefeuille", engine)
+history_df = db.get_view("view_historique_portefeuille", engine)
 
 # 2. Sidebar : choix de l'enveloppe + slider de période
-duree = st.select_slider(...)
+period = st.select_slider(...)
 
 # 3. Logique temporelle
-date_debut = logic.get_date_debut(duree)
-df_periode = logic.get_df_periode(df_histo, date_debut)
+start_date = logic.get_start_date(period)
+period_df = logic.get_period_df(history_df, start_date)
 
 # 4. Calculs généraux (indépendants de la période)
-capital = logic.get_patrimoine_total(df_filtre)
-perf = logic.get_perf_marches(df_filtre)
+capital = logic.get_total_wealth(filtre_df)
+perf = logic.get_market_perf(filtre_df)
 
 # 5. Calculs sur la période (réactifs au slider)
-perf_periode = logic.get_perf_ptf_periode(...)
-injecte = logic.get_injecte_periode(...)
+perf_periode = logic.get_portfolio_period_perf(...)
+invested = logic.get_period_invested(...)
 
 # 6. Tableau, puis données du graphique (le tableau doit précéder le graphique)
-df_tableau, df_tableau_buffer = logic.get_tableau_mensuel_ptf(...)
-df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, ...)
+table_df, table_buffer_df = logic.get_monthly_table_by_portfolio(...)
+contributions_chart_df, capital_chart_df = logic.get_chart_data(table_buffer_df, ...)
 
-# 7. Affichage : st.metric, donuts (charts.make_donuts), graphique (charts.make_graph_global)
+# 7. Affichage : st.metric, donuts (charts.make_donuts), graphique (charts.make_global_chart)
 #    Le graphique est masqué si la période est trop courte ("1 Mois", "15 Jours", "Début Mois")
 ```
 
@@ -300,11 +300,11 @@ df_apports_graph, df_capital_graph = logic.get_donnees_graph(df_tableau_buffer, 
 
 ### Nommage
 
-| Préfixe | Usage |
+| Préfixe / suffixe | Usage |
 | :--- | :--- |
 | `get_` | Fonction qui calcule et retourne une valeur |
 | `make_` | Fonction qui crée et retourne une figure Plotly |
-| `df_` | DataFrame pandas |
+| `_df` (suffixe) | DataFrame pandas (ex. `history_df`) |
 | `fig_` | Figure Plotly |
 | `pdt_` | Colonne liée à un produit financier (convention de la base) |
 | `ptf_` | Colonne liée à un portefeuille (convention de la base) |
