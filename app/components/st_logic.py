@@ -1,14 +1,35 @@
 # app/components/st_logic.py
 
+"""
+Logique métier de l'application Personal Finance Tracker.
+
+Ce module contient tous les calculs et transformations de données : KPIs,
+performances sur période, tableaux mensuels, TRI, fiscalité.
+
+Règles d'architecture :
+- Fonctions pures uniquement : aucun code Streamlit, aucun accès à la base
+    (ni engine, ni requête SQL). Les données arrivent déjà chargées en
+    DataFrames, fournis par app/components/database.py.
+- Les graphiques sont construits dans st_charts.py, pas ici.
+- Les fonctions dépendantes de la date du jour (TRI) acceptent un paramètre
+    optionnel `today` pour rester testables de façon déterministe.
+
+Constantes :
+- PORTFOLIO_TRI_TYPES / PRODUCT_TRI_TYPES : types de mouvement qui entrent dans
+    le calcul du TRI. La différence (TRANSFERT seulement côté produit) est
+    voulue ; ne pas harmoniser sans valider l'impact sur les TRI affichés.
+- PORTFOLIO_TO_PRODUCT_IDS : correspondance enveloppe → produits.
+"""
+
 import pandas as pd
 from pyxirr import xirr
 
-# =============================================================================
-# st_logic.py
-# Contient toute la logique métier de l'application (calculs, transformations).
-# Aucun code Streamlit ici — uniquement des fonctions Python pures.
-# =============================================================================
+from core.constants import MovementType
 
+# --------------------------------------------------------------------------------
+
+PORTFOLIO_TRI_TYPES = (MovementType.APPORT, MovementType.ABONDEMENT)
+PRODUCT_TRI_TYPES = (MovementType.APPORT, MovementType.ABONDEMENT, MovementType.TRANSFERT)
 
 PORTFOLIO_TO_PRODUCT_IDS = {
     1: [1, 7],
@@ -18,6 +39,7 @@ PORTFOLIO_TO_PRODUCT_IDS = {
     6: [10, 11],
 }
 
+# --------------------------------------------------------------------------------
 
 def get_total_wealth(df):
     """
@@ -554,54 +576,73 @@ def get_net_capital(df, product_ids):
     return net_capital
 
 
-def get_portfolio_tri(df, engine, portfolio_ids):
+def get_portfolio_tri(df, flows_df, portfolio_ids, today=None):
     """
-    Calcule le Taux de Rendement Interne (TRI / XIRR) pour une ou plusieurs enveloppes.
-
-    Reproduit la logique de TRI.PAIEMENTS d'Excel :
-    - Flux négatifs : les apports historiques (argent sorti de la poche)
-    - Flux positif final : le capital actuel à la date d'aujourd'hui
+    Calcule le TRI (XIRR) annualisé d'une ou plusieurs enveloppes.
 
     Args:
-        df (DataFrame)      : view_global_portefeuille (snapshot instantané)
-        engine              : connexion SQLAlchemy
-        portfolio_ids (list)    : liste des ptf_id à inclure — ex: [1, 2] pour PEA+CTO
+        df (DataFrame): view_global_portefeuille (snapshot instantané)
+        flows_df (DataFrame): flux de get_tri_flows() (non filtré)
+        portfolio_ids (list): ptf_id à inclure
+        today (pd.Timestamp): date du flux final (défaut : aujourd'hui)
 
     Returns:
         float: TRI annualisé en %
     """
+    today = today if today is not None else pd.Timestamp.today()
 
-    # --- 1. RÉCUPÉRATION DES FLUX HISTORIQUES ---
-    # On prend uniquement les APPORT (dépôts cash réels sur la poche broker)
-    # Les ACHAT sont exclus — ce serait un double comptage avec les APPORT
-    query = """
-        SELECT
-            pdt.ptf_id,
-            mvt_date,
-            -(mvt_nb_parts * mvt_prix + mvt_frais) AS amount
-        FROM mouvement_mvt mvt
-        JOIN produit_financier_pdt pdt ON mvt.pdt_id = pdt.pdt_id
-        WHERE mvt_type_mouvement IN ('APPORT', 'ABONDEMENT')
-        AND pdt.ptf_id IN %(portfolio_ids)s
-    """
+    flows = flows_df[
+        flows_df['mvt_type_mouvement'].isin(PORTFOLIO_TRI_TYPES)
+        & flows_df['ptf_id'].isin(portfolio_ids)
+    ].sort_values('mvt_date')
 
-    tri_df = pd.read_sql(query, engine, params={"portfolio_ids": tuple(portfolio_ids)})
-    tri_df = tri_df.sort_values('mvt_date')
+    amounts = flows['amount'].tolist()
+    dates = flows['mvt_date'].tolist()
 
-    # --- 2. CONSTRUCTION DES LISTES XIRR ---
-    flux  = tri_df["amount"].tolist()
-    dates = tri_df["mvt_date"].tolist()
-
-    # --- 3. AJOUT DU FLUX FINAL POSITIF ---
-    # Capital actuel = ce qu'on récupèrerait si on vendait tout aujourd'hui
     capital = df.query("ptf_id == @portfolio_ids")['capital_actuel'].sum()
-    flux.append(capital)
-    dates.append(pd.Timestamp.today())
+    amounts.append(capital)
+    dates.append(today)
 
-    # --- 4. CALCUL DU TRI ---
-    tri = xirr(dates, flux)
+    return xirr(dates, amounts) * 100
 
-    return tri * 100  # Converti en %
+
+def get_product_tri(df, flows_df, product_ids, today=None):
+    """
+    Calcule le TRI (XIRR) annualisé de chaque produit d'une liste.
+
+    Un XIRR indépendant est calculé par produit, sur ses propres flux
+    (APPORT, ABONDEMENT, TRANSFERT) et son propre capital actuel. Les produits
+    ne sont pas agrégés entre eux.
+
+    Args:
+        df (DataFrame): view_global_portefeuille (snapshot instantané)
+        flows_df (DataFrame): flux de get_tri_flows() (non filtré)
+        product_ids (list): pdt_id à inclure — ex: [4, 5, 6] pour le PEE CiC
+        today (pd.Timestamp): date du flux final (défaut : aujourd'hui)
+
+    Returns:
+        dict: {pdt_id: tri_annualisé_en_%}
+    """
+    today = today if today is not None else pd.Timestamp.today()
+    tri = {}
+
+    for product_id in product_ids:
+        flows = flows_df[
+            flows_df['mvt_type_mouvement'].isin(PRODUCT_TRI_TYPES)
+            & (flows_df['pdt_id'] == product_id)
+        ].sort_values('mvt_date')
+
+        amounts = flows['amount'].tolist()
+        dates = flows['mvt_date'].tolist()
+
+        # Flux final : capital actuel de CE produit à la date du jour
+        capital = df.query("pdt_id == @product_id")['capital_actuel'].sum()
+        amounts.append(capital)
+        dates.append(today)
+
+        tri[product_id] = xirr(dates, amounts) * 100
+
+    return tri
 
 
 def get_product_period_perf(history_product_df, period_product_df, period, start_date, product_ids, aggregate=False):
@@ -677,57 +718,6 @@ def get_product_period_perf(history_product_df, period_product_df, period, start
         return {"euro": total_euro, "pct": pct}
     
     return perf
-
-
-def get_product_tri(df, engine, product_ids):
-    """
-    Calcule le Taux de Rendement Interne (TRI / XIRR) pour chaque produit d'une liste.
-
-    Reproduit la logique de TRI.PAIEMENTS d'Excel :
-    - Flux négatifs : les apports et abondements historiques par produit
-    - Flux positif final : le capital actuel à la date d'aujourd'hui
-
-    Args:
-        df (DataFrame)      : view_global_portefeuille (snapshot instantané)
-        engine              : connexion SQLAlchemy
-        product_ids (list)    : liste des pdt_id à inclure
-
-    Returns:
-        dict: {pdt_id: tri_annualisé}
-    """
-    tri = {}
-
-    for product_id in product_ids:
-        # --- 1. RÉCUPÉRATION DES FLUX HISTORIQUES ---
-        # On prend uniquement les APPORT (dépôts cash réels sur la poche broker)
-        # Les ACHAT sont exclus — ce serait un double comptage avec les APPORT
-        query = """
-            SELECT
-                pdt_id,
-                mvt_date,
-                -(mvt_nb_parts * mvt_prix + mvt_frais) AS amount
-            FROM mouvement_mvt mvt
-            WHERE mvt_type_mouvement IN ('APPORT', 'ABONDEMENT', 'TRANSFERT')
-            AND pdt_id = %(pdt_id)s
-        """
-
-        tri_df = pd.read_sql(query, engine, params={"pdt_id": product_id})
-        tri_df = tri_df.sort_values('mvt_date')
-
-        # --- 2. CONSTRUCTION DES LISTES XIRR ---
-        flux  = tri_df["amount"].tolist()
-        dates = tri_df["mvt_date"].tolist()
-
-        # --- 3. AJOUT DU FLUX FINAL POSITIF ---
-        # Capital actuel = ce qu'on récupèrerait si on vendait tout aujourd'hui
-        capital = df.query("pdt_id == @product_id")['capital_actuel'].sum()
-        flux.append(capital)
-        dates.append(pd.Timestamp.today())
-
-        # --- 4. CALCUL DU TRI ---
-        tri[product_id] = xirr(dates, flux) * 100
-
-    return tri
 
 
 def get_monthly_table_by_product(history_df, contributions_df, period, product_group_map):

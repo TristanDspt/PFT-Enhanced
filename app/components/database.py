@@ -79,3 +79,26 @@ def get_product_quotes(engine, product_id, start_date):
     quote_df['max'] = quote_df['max'].fillna(quote_df['cot_prix'])
 
     return quote_df
+
+
+@st.cache_data
+def get_tri_flows(_engine):
+    """
+    Charge en une requête tous les flux utiles au calcul des TRI.
+    Le filtrage par type de mouvement et par id se fait dans st_logic.py.
+
+    Returns:
+        DataFrame: [ptf_id, pdt_id, mvt_type_mouvement, mvt_date, amount]
+    """
+    query = """
+        SELECT
+            pdt.ptf_id,
+            mvt.pdt_id,
+            mvt.mvt_type_mouvement,
+            mvt.mvt_date,
+            -(mvt.mvt_nb_parts * mvt.mvt_prix + mvt.mvt_frais) AS amount
+        FROM mouvement_mvt mvt
+        JOIN produit_financier_pdt pdt ON mvt.pdt_id = pdt.pdt_id
+        WHERE mvt.mvt_type_mouvement IN ('APPORT', 'ABONDEMENT', 'TRANSFERT')
+    """
+    return pd.read_sql(query, _engine)

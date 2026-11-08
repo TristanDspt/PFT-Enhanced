@@ -50,7 +50,7 @@ La logique est **strictement séparée** de l'affichage :
 | Fichier | Rôle |
 | :--- | :--- |
 | `app/main.py` | Point d'entrée Streamlit |
-| `app/components/database.py` | Requêtes de l'application : chargement des vues SQL en DataFrame, avec cache Streamlit |
+| `app/components/database.py` | Requêtes de l'application : chargement des vues SQL en DataFrame et des flux de mouvements pour les TRI (`get_tri_flows`), avec cache Streamlit |
 | `app/components/st_logic.py` | Toute la logique métier (calculs, transformations), zéro Streamlit |
 | `app/components/st_charts.py` | Toutes les figures Plotly |
 | `app/pages/1_📊_KPIs.py` | Page KPIs globaux |
@@ -59,6 +59,7 @@ La logique est **strictement séparée** de l'affichage :
 | `app/pages/4_✍️_Saisie.py` | Saisie des mouvements, et bouton de mise à jour des fonds |
 | `core/config.py` | Configuration : environnement actif, chemins, paramètres de connexion |
 | `core/db_engine.py` | Création de l'engine SQLAlchemy, sans dépendance à Streamlit |
+| `core/constants.py` | Enum des valeurs partagées entre couches et présentes en base (`MovementType` : types de mouvement) |
 | `core/utils.py` | Fonctions utilitaires partagées (`load_yaml`) |
 | `pipelines/etl/update_price.py` | ETL : cours boursiers (yfinance) |
 | `pipelines/etl/update_pee.py` | ETL : fonds d'épargne salariale (fichiers CSV / Excel téléchargés) |
@@ -84,6 +85,7 @@ La logique est **strictement séparée** de l'affichage :
 │   └── main.py                ← Point d'entrée Streamlit
 ├── core/
 │   ├── config.py              ← Configuration (lit le .env)
+│   ├── constants.py           ← Enum partagés (types de mouvement)
 │   ├── db_engine.py           ← Engine SQLAlchemy
 │   └── utils.py               ← Utilitaires partagés
 ├── pipelines/
@@ -212,15 +214,16 @@ Le schéma est dans `db/schema/Create_DB_PFT.sql` (4 tables : portefeuille, prod
 | `get_market_perf(df)` | df | `dict {euro, pct}` |
 | `get_account_weights(df)` | df | `dict {etf, pee, savings}` |
 | `get_net_capital(df, product_ids)` | df, list[int] | `dict {pdt_id: net}` |
-| `get_portfolio_tri(df, engine, portfolio_ids)` | df, engine, list | `float` |
-| `get_product_tri(df, engine, product_ids)` | df, engine, list | `dict {pdt_id: float}` |
-
-> ⚠️ `get_perf_etf` **supprimée** : doublon avec `get_market_perf`. La perf ETF se calcule via `get_market_perf(df.query("ptf_id in (1, 2)"))`.
+| `get_portfolio_tri(df, flows_df, portfolio_ids, today=None)` | df, flows_df, list, Timestamp (optionnel) | `float` |
+| `get_product_tri(df, flows_df, product_ids, today=None)` | df, flows_df, list, Timestamp (optionnel) | `dict {pdt_id: float}` |
 
 > ⚠️ `get_net_capital` prend `product_ids` (`list[int]`) et retourne un `dict {pdt_id: net}`. Fiscalité par `pdt_id` : PEA / PEE 18.6 % | CTO 31.4 %. Pas d'impôt s'il n'y a pas de plus-value.
 
 > ⚠️ `get_portfolio_tri` calcule le TRI pour une ou plusieurs **enveloppes** (`ptf_id`) → `float`.
 > `get_product_tri` calcule le TRI pour un ou plusieurs **produits** (`pdt_id`) → `dict {pdt_id: float}`.
+> ⚠️ Les fonctions de TRI sont pures : elles reçoivent `flows_df` (résultat de `database.get_tri_flows()`, chargé une seule fois en haut de page) et filtrent elles-mêmes types de mouvement et ids.
+> Types retenus : `APPORT` + `ABONDEMENT` côté enveloppe, `APPORT` + `ABONDEMENT` + `TRANSFERT` côté produit. La différence est voulue.
+> `today` (défaut : date du jour) est la date du flux final ; le fixer rend le calcul déterministe pour les tests.
 
 ### 2. Logique temporelle
 > Liées au slider de période. Basées sur `history_df` et `contributions_df`.
@@ -266,10 +269,11 @@ Le schéma est dans `db/schema/Create_DB_PFT.sql` (4 tables : portefeuille, prod
 ## Structure type d'une page
 
 ```python
-# 1. Chargement des vues (database.py)
+# 1. Chargement des vues et des flux TRI (database.py)
 engine = db.get_engine()
 df = db.get_view("view_global_portefeuille", engine)
 history_df = db.get_view("view_historique_portefeuille", engine)
+flows_df = db.get_tri_flows(engine)
 
 # 2. Sidebar : choix de l'enveloppe + slider de période
 period = st.select_slider(...)

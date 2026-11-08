@@ -1,19 +1,31 @@
 # app/pages/Dashboards.py
 
+"""
+Page Dashboards : détail par enveloppe (ETF, PEA, CTO, STEF, CiC).
+
+Un menu latéral choisit l'enveloppe affichée (bloc `match`). Chaque dashboard
+présente le capital, la performance, le TRI, le capital net, le journal de
+bord sur la période choisie (slider) et le graphique d'évolution. Le dashboard
+CiC propose en plus une vue détaillée par produit (Obligation, Equilibre,
+Stratégie).
+
+Architecture :
+- Les données sont chargées une seule fois en haut de page via
+    app/components/database.py (vues SQL + flux pour les TRI), puis filtrées
+    par enveloppe dans chaque `case`.
+- Aucun calcul ici : tout vient de st_logic.py.
+- Aucune figure construite ici : tout vient de st_charts.py.
+- La page ne contient que : chargement, sidebar, appels de fonctions et
+    affichage Streamlit.
+"""
+
 import streamlit as st
 
 import app.components.database as db
 import app.components.st_charts as charts
 import app.components.st_logic as logic
 
-# =============================================================================
-# Dashboards.py
-# Page dédiée aux dashboards de l'application Personal Finance Tracker.
-# Ce fichier ne contient que : imports, chargement, sidebar, appels de fonctions
-# et affichage Streamlit.
-# Zéro calcul ici → st_logic.py | Zéro figure construite ici → st_charts.py
-# =============================================================================
-
+# --------------------------------------------------------------------------------
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
@@ -48,12 +60,13 @@ st.markdown("""
 
 engine = db.get_engine()
 
-# Les vues SQL sont la source de toutes les données de l'app
-df             = db.get_view("view_global_portefeuille", engine)      # snapshot instantané
-history_df       = db.get_view("view_historique_portefeuille", engine)  # historique quotidien
-history_product_df   = db.get_view("view_historique_pdt", engine)           # historique quotidien par pdt_id
-contributions_df     = db.get_view("view_apports_mensuels", engine)         # flux cash mensuels
+# Données de l'app : vues SQL + les flux pour les TRI
+df                       = db.get_view("view_global_portefeuille", engine)      # snapshot instantané
+history_df               = db.get_view("view_historique_portefeuille", engine)  # historique quotidien
+history_product_df       = db.get_view("view_historique_pdt", engine)           # historique quotidien par pdt_id
+contributions_df         = db.get_view("view_apports_mensuels", engine)         # flux cash mensuels
 contributions_product_df = db.get_view("view_apports_mensuels_pdt", engine)     # flux cash mensuels par pdt_id
+flows_df                 = db.get_tri_flows(engine)                             # mouvements d'argent (apports, abondements) pour les TRI
 
 
 # --- 3. SIDEBAR ---
@@ -99,7 +112,7 @@ match selected_view:
         capital = logic.get_total_wealth(etf_df)
         perf = logic.get_market_perf(etf_df)
         invested_capital = etf_df['capital_investi'].sum()
-        tri = logic.get_portfolio_tri(df, engine, [1, 2])
+        tri = logic.get_portfolio_tri(df, flows_df, [1, 2])
 
         # DONUTS — Préparation des DataFrames filtrés par enveloppe
         donut_df = df.query("ptf_id in [1, 2]").groupby('ptf_id')['capital_actuel'].sum().reset_index()
@@ -204,7 +217,7 @@ match selected_view:
         perf = logic.get_market_perf(pea_df)
         invested_capital = pea_df['capital_investi'].sum()
         net_capital = logic.get_net_capital(df, [1])
-        tri = logic.get_portfolio_tri(df, engine, [1])
+        tri = logic.get_portfolio_tri(df, flows_df, [1])
 
         st.markdown("<h2 style='text-align: center;'>PEA : S&P 500</h2>", unsafe_allow_html=True)
 
@@ -313,7 +326,7 @@ match selected_view:
         perf = logic.get_market_perf(cto_df)
         invested_capital = cto_df['capital_investi'].sum()
         net_capital = logic.get_net_capital(df, [2])
-        tri = logic.get_portfolio_tri(df, engine, [2])
+        tri = logic.get_portfolio_tri(df, flows_df, [2])
 
         st.markdown("<h2 style='text-align: center;'>CTO : GOLD</h2>", unsafe_allow_html=True)
 
@@ -421,7 +434,7 @@ match selected_view:
         perf = logic.get_market_perf(stef_df)
         invested_capital = stef_df['capital_investi'].sum()
         net_capital = logic.get_net_capital(df, [3])
-        tri = logic.get_portfolio_tri(df, engine, [3])
+        tri = logic.get_portfolio_tri(df, flows_df, [3])
 
         st.markdown("<h2 style='text-align: center;'>PEE : STEF</h2>", unsafe_allow_html=True)
 
@@ -533,7 +546,7 @@ match selected_view:
         perf = logic.get_market_perf(cic_df)
         invested_capital = cic_df['capital_investi'].sum()
         net_capital = logic.get_net_capital(df, [4, 5, 6])
-        tri = logic.get_portfolio_tri(df, engine, [4])
+        tri = logic.get_portfolio_tri(df, flows_df, [4])
 
         # DONUTS — Préparation des DataFrames filtrés par enveloppe
         donut_df = df.query("pdt_id in [4, 5, 6]").groupby('pdt_id')['capital_actuel'].sum().reset_index()
@@ -589,7 +602,7 @@ match selected_view:
 
         # KPIs GÉNÉRAUX — Capital total + perfs globales par ENVELOPPES (hors période)
         perf_product_max = logic.get_product_period_perf(history_product_df, period_product_df, period='Max', start_date=None, product_ids=[4, 5, 6])
-        tri_product = logic.get_product_tri(df, engine, [4, 5, 6])
+        tri_product = logic.get_product_tri(df, flows_df, [4, 5, 6])
 
         col5, col6, col7 = st.columns(3)
         
