@@ -93,7 +93,7 @@
 - [ ] Choix de la techno big data pour les news, justifié au regard du REAC — C1, C2 🔶 · #22
 
 **2.3 Scraping news**
-- [ ] 🎓 Bases du scraping (HTML, parsing) + `requests` / `beautifulsoup4` dans `requirements.txt` — #23
+- [x] 🎓 Bases du scraping (HTML, parsing) + `requests` / `beautifulsoup4` dans `requirements.txt` — #23
 - [ ] Specs d'extraction : sources, CGU / robots.txt, flux RSS privilégiés quand dispo (plus stables qu'une page HTML) — C1 · #23
 - [ ] Scraper : point d'entrée, gestion d'erreurs, logs, sauvegarde — C1 · #23
 - [ ] Tests du scraper sur des pages HTML sauvegardées (détecte la casse si un site change sa structure) — C1, C18 · #24
