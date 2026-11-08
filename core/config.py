@@ -33,6 +33,25 @@ if ENVIRONMENT not in ("DEMO", "PROD"):
 
 # --------------------------------------------------------------------------------
 
+def _require_env(name: str) -> str:
+    """
+    Retourne la valeur d'une variable d'environnement obligatoire.
+
+    Args:
+        name: Nom de la variable à lire.
+
+    Returns:
+        Valeur de la variable.
+
+    Raises:
+        ValueError: Si la variable est absente ou vide.
+    """
+    value = os.getenv(name)
+    if not value:
+        raise ValueError(f"Variable d'environnement manquante ou vide : {name}")
+    return value
+
+
 def find_project_root() -> Path:
     """
     Recherche la racine du projet à partir de l'emplacement
@@ -58,31 +77,7 @@ def find_project_root() -> Path:
 
     raise FileNotFoundError("requirements.txt introuvable")
 
-PROJECT_ROOT = find_project_root()
-
-DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
-LOGS_DIR = PROJECT_ROOT / "logs"
-DOWNLOADS_DIR = Path(os.getenv("DOWNLOADS_DIR") or Path.home() / "Downloads")
-
 # --------------------------------------------------------------------------------
-
-def _require_env(name: str) -> str:
-    """
-    Retourne la valeur d'une variable d'environnement obligatoire.
-
-    Args:
-        name: Nom de la variable à lire.
-
-    Returns:
-        Valeur de la variable.
-
-    Raises:
-        ValueError: Si la variable est absente ou vide.
-    """
-    value = os.getenv(name)
-    if not value:
-        raise ValueError(f"Variable d'environnement manquante ou vide : {name}")
-    return value
 
 DB_PARAMS = {
     "host": _require_env(f"HOST_{ENVIRONMENT}"),
@@ -91,3 +86,10 @@ DB_PARAMS = {
     "password": _require_env(f"PASSWORD_{ENVIRONMENT}"),
     "port": int(_require_env(f"PORT_{ENVIRONMENT}")),
 }
+
+
+PROJECT_ROOT = find_project_root()
+
+DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
+LOGS_DIR = PROJECT_ROOT / "logs"
+DOWNLOADS_DIR = Path(os.getenv("DOWNLOADS_DIR") or Path.home() / "Downloads")
