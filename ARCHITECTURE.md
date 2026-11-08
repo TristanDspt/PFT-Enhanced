@@ -99,7 +99,7 @@ La logique est **strictement séparée** de l'affichage :
 │   └── seed/                  ← (réservé : données fictives)
 ├── settings/
 │   ├── bank.example.yaml      ← Modèle des réglages d'import (versionné)
-│   └── config.yaml            ← Réglages non secrets (vide pour l'instant)
+│   └── config.yaml            ← Réglages non secrets (taux fiscaux)
 ├── api/                       ← (réservé : API de données, API de modèle)
 ├── data/                      ← raw/ et processed/ (contenu ignoré par git)
 ├── models/                    ← (réservé, contenu ignoré par git)
@@ -125,6 +125,17 @@ Les dossiers marqués « réservé » ne contiennent qu'un fichier `.gitkeep` : 
 ## ⚙️ Configuration
 
 Toute la configuration passe par `core/config.py`.
+
+### Où va quoi
+
+| Nature | Emplacement | Exemples |
+| :--- | :--- | :--- |
+| Secrets et paramètres de connexion | `.env` (non versionné) | identifiants PostgreSQL, environnement actif |
+| Paramètres techniques et réglementaires | `settings/config.yaml` | taux fiscaux |
+| Réglages personnels | `settings/bank.yaml` (non versionné) | formats des fichiers bancaires |
+| Valeurs fermées partagées entre couches | `core/constants.py` (Enum) | types de mouvement |
+| Règles de calcul | modules de logique (`st_logic.py`) | types de mouvement retenus pour le TRI |
+| Données métier | base de données | portefeuilles, produits, mouvements, cotations |
 
 ### Variables d'environnement (`.env`)
 
@@ -157,7 +168,7 @@ Le fichier contient deux blocs :
 - `formats` : réglages pandas de lecture, un par mise en page de fichier téléchargé (séparateur, lignes à ignorer, format de date...) ;
 - `products` : un produit par `pdt_id`, avec `name`, `keyword` (texte présent dans le nom du fichier), `type` (`csv` ou `xls`) et `format` (nom d'une entrée de `formats`).
 
-`settings/config.yaml` est réservé aux futurs réglages non secrets (il est vide pour l'instant). La fonction `load_yaml(filepath, required=False)` de `core/utils.py` lit ces fichiers. Avec `required=True`, un fichier absent ou vide arrête le script avec un message explicite.
+`settings/config.yaml` contient les réglages non secrets (taux fiscaux). La fonction `load_yaml(filepath, required=False)` de `core/utils.py` lit ces fichiers. Avec `required=True`, un fichier absent ou vide arrête le script avec un message explicite.
 
 ---
 
