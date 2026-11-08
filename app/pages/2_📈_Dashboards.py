@@ -121,7 +121,7 @@ match selected_view:
         fig = charts.make_donuts(
         df=donut_df, names='legend_label', values='capital_actuel',
         color_discrete_map={"S&P 500": "#822A2A", "Gold": "#D3AF37"},
-        rotation=50, center_label="Poids ETF", height=194
+        center_label="Poids ETF", height=194
         )
 
         st.markdown("<h2 style='text-align: center;'>ETF : PEA & CTO</h2>", unsafe_allow_html=True)
@@ -555,7 +555,7 @@ match selected_view:
         fig = charts.make_donuts(
         df=donut_df, names='legend_label', values='capital_actuel',
         color_discrete_map={"Obligation": "#018289", "Equilibre": "#0f228b", "Stratégie": "#fe330f"},
-        rotation=175, center_label="Poids CiC", height=194
+        center_label="Poids CiC", height=194
         )
 
         st.markdown("<h2 style='text-align: center;'>PEE : CiC</h2>", unsafe_allow_html=True)

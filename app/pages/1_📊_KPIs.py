@@ -172,17 +172,17 @@ savings_donut_df['legend_label'] = savings_donut_df['pdt_id'].map({10: "Livret A
 fig_etf = charts.make_donuts(
     df=etf_donut_df, names='legend_label', values='capital_actuel',
     color_discrete_map={"S&P 500": "#822A2A", "Gold": "#D3AF37"},
-    rotation=40, center_label="Poids ETF", weight=weights['etf']
+    center_label="Poids ETF", weight=weights['etf']
 )
 fig_pee = charts.make_donuts(
     df=pee_donut_df, names='legend_label', values='capital_actuel',
     color_discrete_map={"STEF": "#00519e", "CiC": "#018289"},
-    rotation=80, center_label="Poids PEE", weight=weights['pee']
+    center_label="Poids PEE", weight=weights['pee']
 )
 fig_liv = charts.make_donuts(
     df=savings_donut_df, names='legend_label', values='capital_actuel',
     color_discrete_map={"Livret A": "#FF8C00", "LEP": "#540A88"},
-    rotation=85, center_label="Poids Livrets", weight=weights['savings']
+    center_label="Poids Livrets", weight=weights['savings']
 )
 
 col4, col5, col6 = st.columns(3)

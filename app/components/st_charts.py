@@ -29,7 +29,7 @@ def apply_style(fig):
     )
 
 
-def make_donuts(df, names, values, color_discrete_map, rotation, center_label, weight=None, height=200):
+def make_donuts(df, names, values, color_discrete_map, center_label, rotation=None, weight=None, height=200):
     """
     Crée un donut chart générique pour afficher la répartition d'une enveloppe.
     Utilisé dans Home.py (poids global) et Dashboards.py (répartition interne).
@@ -39,8 +39,8 @@ def make_donuts(df, names, values, color_discrete_map, rotation, center_label, w
         names (str): nom de la colonne utilisée pour les labels (ex: 'legend_label')
         values (str): nom de la colonne utilisée pour les valeurs (ex: 'capital_actuel')
         color_discrete_map (dict): mapping label → couleur hex (ex: {"S&P 500": "#822A2A"})
-        rotation (int): angle de départ du premier secteur (en degrés)
         center_label (str): texte affiché au centre du donut (ex: "Poids ETF")
+        rotation (int): angle de départ du premier secteur (en degrés)
         weight (float, optional): poids en % affiché en grand au centre. 
                                 Si None, le label est centré sans valeur. Default: None
         height (int, optional): hauteur du graphique en pixels. Default: 200
@@ -70,7 +70,9 @@ def make_donuts(df, names, values, color_discrete_map, rotation, center_label, w
 
     # Application du style commun + rotation spécifique à cette enveloppe
     apply_style(fig)
-    fig.update_traces(rotation=rotation)
+    if rotation is None:
+        rotation = compute_rotation(df[values])
+    fig.update_traces(rotation=rotation, sort=True, direction='clockwise')
 
     # Layout + annotations : label en haut, poids en grand en bas
     annotations = []
@@ -168,3 +170,30 @@ def make_global_chart(contributions_chart_df, capital_chart_df, title=None):
         global_chart.update_layout(title=title)
 
     return global_chart
+
+
+def compute_rotation(values, target_angle=0):
+    """
+    Calcule la rotation qui place le plus petit secteur du donut à un angle cible.
+
+    Avec sort=True et direction='clockwise', Plotly dessine les secteurs du plus
+    grand au plus petit dans le sens horaire à partir de `rotation` (0 = midi).
+    Le plus petit est donc le dernier, et finit pile sur `rotation` : on recule
+    le départ d'une demi-largeur de ce secteur pour centrer son milieu sur la cible.
+
+    Args:
+        values (iterable): valeurs des secteurs
+        target_angle (int): position voulue du plus petit secteur, en degrés
+            depuis midi dans le sens horaire (0 = midi). Default: 0
+
+    Returns:
+        float: rotation à passer à Plotly, entre 0 et 360
+    """
+    values = [float(v) for v in values if v > 0]
+    total = sum(values)
+
+    if total == 0:
+        return 0
+    smallest_share = min(values) / total
+
+    return (target_angle + 180 * smallest_share) % 360
