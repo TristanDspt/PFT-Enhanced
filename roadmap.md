@@ -2,7 +2,7 @@
 
 > Chaque tâche est reliée aux compétences du REAC (C1…C19) qu'elle alimente.
 > E5 (C20, C21) est traité en cours, hors PFT.
-> 🔶 = décision en suspens · 🎓 = techno à apprendre avant de coder · 🛑 = point de contrôle
+> 🔶 = décision en suspens · 🎓 = techno à apprendre avant de coder · 🛑 = point de contrôle · #N = issue GitHub correspondante
 
 **Contraintes assumées**
 - Budget 0 € : tout tourne en local (pré-prod locale dockerisée, pas de cloud payant).
@@ -33,43 +33,47 @@
 > Uniquement ce qui conditionne la suite. Ordre à respecter.
 
 **1.1 Repo propre**
-- [x] Clone local de la v1, nettoyage complet avant le premier commit — C17
-- [x] 🎓 Gestion de config : variables d'environnement, `.env`, python-dotenv
-- [x] Chemins relatifs/configurables (`.env` + module `config`) — C4, C17
-- [x] `.gitignore` blindé, zéro secret, zéro donnée perso, `requirements.txt` à jour
-- [x] Nouveau repo public + liens croisés dans les README (v2 → v1 privée, "disponible sur demande")
+- [x] Clone local de la v1, nettoyage complet avant le premier commit — C17 · #14
+- [x] 🎓 Gestion de config : variables d'environnement, `.env`, python-dotenv — #15
+- [x] Chemins relatifs/configurables (`.env` + module `config`) — C4, C17 · #15
+- [x] `.gitignore` blindé, zéro secret, zéro donnée perso, `requirements.txt` à jour — #14
+- [x] Nouveau repo public + liens croisés dans les README (v2 → v1 privée, "disponible sur demande") — #16
 
 **1.2 Schéma v2**
-- [ ] 🎓 Révision express Merise (MCD, MLD, MPD) + prise en main de Looping
-- [ ] MCD → MLD → MPD **PostgreSQL uniquement** (les news vont dans le stockage big data, hors Merise) — C4
-- [ ] Correction de la modélisation (séparation actif / portefeuille, nettoyage des contraintes et index) — C4
-- [ ] Renommage FR → EN : code Python (commit séparé) + schéma SQL avec le nouveau MPD
-- [ ] Suppression du doublon `UNIQUE (pdt_id, cot_date)` sur `cotation_cot` — C4
-- [ ] Régime fiscal : taux dans `config.yaml` + régime dérivé de `ptf_type_enveloppe` (fin des taux en dur dans `st_logic.py`) — C4, C17
-- [ ] Saisie : INSERT en f-strings → requêtes paramétrées (injection SQL) — C17
+- [ ] 🎓 Révision express Merise (MCD, MLD, MPD) + prise en main de Looping — #1
+- [ ] MCD → MLD → MPD **PostgreSQL uniquement** (les news vont dans le stockage big data, hors Merise) — C4 · #1
+- [ ] Correction de la modélisation (séparation actif / portefeuille, nettoyage des contraintes et index) — C4 · #1
+- [x] Renommage FR → EN du code Python (commit séparé) — #3
+- [ ] Renommage FR → EN du schéma SQL avec le nouveau MPD — #1
+- [ ] Suppression du doublon `UNIQUE (pdt_id, cot_date)` sur `cotation_cot` — C4 · #1
+- [ ] Régime fiscal : taux dans `config.yaml` + régime dérivé de `ptf_type_enveloppe` (fin des taux en dur dans `st_logic.py`) — C4, C17 · #4
+- [x] Saisie : INSERT en f-strings → requêtes paramétrées (injection SQL) — C17 · #5
+- [x] Refacto : sortie du SQL de `st_logic.py` (fonctions TRI pures, `MovementType` dans `core/constants.py`) — C17 · #17
+- [ ] Adaptation des vues SQL et du code au schéma v2 — C4, C17 · #18
 
 **1.3 Données de démo**
-- [ ] 🎓 Principe d'un script de seed (génération de données fictives réalistes)
-- [ ] Script de seed : positions et mouvements fictifs, cotations réelles — C4, C17
-- [ ] Bloc DEMO du `.env` rempli : l'app démarre en `ENVIRONMENT=DEMO` (prérequis README + CI)
-- [ ] Fichiers bancaires fictifs + `bank.yaml` démo pour montrer l'import PEE
-- [ ] Test d'installation depuis un venv vierge en suivant le README — C4, C17
+- [ ] 🎓 Principe d'un script de seed (génération de données fictives réalistes) — #6
+- [ ] Script de seed : positions et mouvements fictifs, cotations réelles — C4, C17 · #6
+- [ ] Bloc DEMO du `.env` rempli : l'app démarre en `ENVIRONMENT=DEMO` (prérequis README + CI) — #7
+- [ ] Fichiers bancaires fictifs + `bank.yaml` démo pour montrer l'import PEE — #7
+- [ ] Test d'installation depuis un venv vierge en suivant le README — C4, C17 · #8
 
 **1.4 Tests & CI**
-- [ ] 🎓 Bases de pytest
-- [ ] Premiers tests sur `st_logic.py` (fonctions pures, sans BDD) — C17
-- [ ] 🎓 Principes CI/CD + bases de GitHub Actions (Quickstart) — à bosser en autonomie, vu en cours plus tard
-- [ ] CI minimale : lint (ruff) + pytest sur push/PR — C18
-- [ ] Doc de la chaîne CI — C18
+- [ ] 🎓 Bases de pytest — #9
+- [ ] Premiers tests sur `st_logic.py` (fonctions pures, sans BDD) — C17 · #9
+- [ ] 🎓 Principes CI/CD + bases de GitHub Actions (Quickstart) — à bosser en autonomie, vu en cours plus tard — #10
+- [ ] CI minimale : lint (ruff) + pytest sur push/PR — C18 · #10
+- [ ] Doc de la chaîne CI — C18 · #10
 
 **1.5 Pilotage (à lancer dès maintenant, évalué "tout au long du projet")**
-- [ ] 🎓 Prise en main de GitHub Projects (issues, board, milestones)
-- [ ] Board GitHub Projects : backlog, kanban, milestones = phases — C16
-- [ ] 🎓 Bases de l'agile : Scrum (sprints, rituels, rôles) vs Kanban
-- [ ] Sprints de 2 semaines + rétro de 10 min notée dans une issue en fin de sprint — C16
-- [ ] Cahier des charges minimal : contexte, acteurs, objectifs, contraintes (budget 0 €, local), planning — E1, C14
-- [ ] Veille : fichier `docs/veille.md`, une fiche par techno découverte (techno, source + fiabilité, description rapide), alimenté au fil du projet — C6
-- [ ] Doc d'installation PostgreSQL + script de création du schéma — C4
+- [x] 🎓 Prise en main de GitHub Projects (issues, board, milestones) — #11
+- [x] Board GitHub Projects : backlog, kanban, milestones = phases — C16 · #11
+- [x] 🎓 Bases de l'agile : Scrum (sprints, rituels, rôles) vs Kanban — #11
+- [x] Sprints de 2 semaines lancés (sprint 1 : 2 → 15 nov) — C16 · #11
+- [ ] Rétro de 10 min notée dans une issue à chaque fin de sprint (en continu) — C16
+- [ ] Cahier des charges minimal : contexte, acteurs, objectifs, contraintes (budget 0 €, local), planning — E1, C14 · #12
+- [ ] Veille : fichier `docs/veille.md`, une fiche par techno découverte (techno, source + fiabilité, description rapide), alimenté au fil du projet — C6 · #13
+- [ ] Doc d'installation PostgreSQL + script de création du schéma — C4 · #2
 
 🛑 **Fin novembre** : bilan du temps réel mesuré → réajustement de toute la suite du planning.
 ⏸️ **Marge** : 1re quinzaine de décembre.
@@ -78,50 +82,51 @@
 
 ### 📥 2. Bloc Données (mi-déc 2026–fév 2027) — E1
 **2.1 Conception globale de l'app (avant tout dev v2)**
-- [ ] User stories de l'app avec critères d'acceptation incluant l'accessibilité (RGAA/WCAG) — C14
-- [ ] Wireframes / parcours utilisateurs (rapides : la v1 existe déjà) — C14
-- [ ] Specs techniques : archi n-tiers (Streamlit / API données / API modèle / PostgreSQL + big data), outils, services éco-responsables — C15
-- [ ] Diagramme de flux de données — C15
+- [ ] User stories de l'app avec critères d'acceptation incluant l'accessibilité (RGAA/WCAG) — C14 · #19
+- [ ] Wireframes / parcours utilisateurs (rapides : la v1 existe déjà) — C14 · #20
+- [ ] Specs techniques : archi n-tiers (Streamlit / API données / API modèle / PostgreSQL + big data), outils, services éco-responsables — C15 · #21
+- [ ] Diagramme de flux de données — C15 · #21
 
 **2.2 Cadrage du bloc données**
 - [ ] Specs techniques du bloc (sources, flux, stockage) — C1, C15
-- [ ] 🎓 Découverte big data : principes, technos citées par le REAC (Hive, Spark…)
-- [ ] Choix de la techno big data pour les news, justifié au regard du REAC — C1, C2 🔶
+- [ ] 🎓 Découverte big data : principes, technos citées par le REAC (Hive, Spark…) — #22
+- [ ] Choix de la techno big data pour les news, justifié au regard du REAC — C1, C2 🔶 · #22
 
 **2.3 Scraping news**
-- [ ] 🎓 Bases du scraping (HTML, parsing) + `requests` / `beautifulsoup4` dans `requirements.txt`
-- [ ] Specs d'extraction : sources, CGU / robots.txt, flux RSS privilégiés quand dispo (plus stables qu'une page HTML) — C1
-- [ ] Scraper : point d'entrée, gestion d'erreurs, logs, sauvegarde — C1
-- [ ] Tests du scraper sur des pages HTML sauvegardées (détecte la casse si un site change sa structure) — C1, C18
+- [ ] 🎓 Bases du scraping (HTML, parsing) + `requests` / `beautifulsoup4` dans `requirements.txt` — #23
+- [ ] Specs d'extraction : sources, CGU / robots.txt, flux RSS privilégiés quand dispo (plus stables qu'une page HTML) — C1 · #23
+- [ ] Scraper : point d'entrée, gestion d'erreurs, logs, sauvegarde — C1 · #23
+- [ ] Tests du scraper sur des pages HTML sauvegardées (détecte la casse si un site change sa structure) — C1, C18 · #24
 
 **2.4 Stockage & requêtes**
-- [ ] 🎓 Bases de Docker + docker-compose (indispensable : Spark/Hive en natif sur Windows = galère)
-- [ ] Mise en place du stockage big data (local, dockerisé) — C1, C2
-- [ ] Requêtes d'extraction documentées (PostgreSQL + big data) : filtres, jointures, optimisations — C2
+- [ ] 🎓 Bases de Docker + docker-compose (indispensable : Spark/Hive en natif sur Windows = galère) — #25
+- [ ] Mise en place du stockage big data (local, dockerisé) — C1, C2 · #25
+- [ ] Requêtes d'extraction documentées (PostgreSQL + big data) : filtres, jointures, optimisations — C2 · #26
 
 **2.5 ETL & agrégation**
-- [ ] ETL existants (APIs + import CSV) remis au standard : fonctions + `main()`, logger dédié (`LOG015`), gestion d'erreurs, dédoublonnage de `type` dans `bank.yaml` — C1
-- [ ] Script d'agrégation : entrées corrompues, doublons, homogénéisation (dates, devises) + doc — C3
-- [ ] Script d'import en BDD + doc versionnée à la racine — C4
-- [ ] **Bascule v1 → v2** (en une seule fois) :
+- [ ] ETL existants (APIs + import CSV) remis au standard : fonctions + `main()`, logger dédié (`LOG015`), gestion d'erreurs, dédoublonnage de `type` dans `bank.yaml` — C1 · #27
+- [ ] Script d'agrégation : entrées corrompues, doublons, homogénéisation (dates, devises) + doc — C3 · #28
+- [ ] Script d'import en BDD + doc versionnée à la racine — C4 · #29
+- [ ] **Bascule v1 → v2** (en une seule fois) — #30 :
   - [ ] Script de migration des vraies données (schéma v1 FR → schéma v2 EN) dans `db/migrations/` — C3, C4
   - [ ] Tâches planifiées (update des cours, backup BDD) repointées vers PFT-Enhanced + chemins des `.bat` / `.vbs` mis à jour
   - [ ] Backup vérifié avant et après la bascule
 
 **2.6 RGPD**
-- [ ] 🎓 RGPD : registre des traitements, principes de minimisation et de conservation
-- [ ] Registre des traitements + procédures de tri (purge, fréquence) — C4
+- [ ] 🎓 RGPD : registre des traitements, principes de minimisation et de conservation — #31
+- [ ] Registre des traitements + procédures de tri (purge, fréquence) — C4 · #31
 
 **2.7 API REST données**
-- [ ] 🎓 FastAPI : auth, Pydantic, tests avec TestClient
-- [ ] 🎓 OWASP API Security Top 10
-- [ ] Endpoints + auth + validation + OWASP API Top 10 + doc OpenAPI — C5
-- [ ] Doc d'accès direct à la BDD — C5
-- [ ] Tests API branchés à la CI — C5, C18
+- [ ] 🎓 FastAPI : auth, Pydantic, tests avec TestClient — #32
+- [ ] 🎓 OWASP API Security Top 10 — #32
+- [ ] Endpoints + auth + validation + OWASP API Top 10 + doc OpenAPI — C5 · #32
+- [ ] Doc d'accès direct à la BDD — C5 · #32
+- [ ] Tests API branchés à la CI — C5, C18 · #33
+- [ ] L'app passe par l'API données (`api_client.py` remplace `database.py`) — C17 · #34
 
 **2.8 Preuve de concept**
-- [ ] PoC minimal dans l'env Docker local : scraping → stockage → API → affichage Streamlit — C15
-- [ ] Conclusion go / no-go documentée (poursuite vers le service LLM) — C15
+- [ ] PoC minimal dans l'env Docker local : scraping → stockage → API → affichage Streamlit — C15 · #35
+- [ ] Conclusion go / no-go documentée (poursuite vers le service LLM) — C15 · #35
 
 🛑 **Fin février** : bilan de phase.
 ⏸️ **Marge** : 1re quinzaine de mars.
