@@ -5,16 +5,6 @@
 
 ---
 
-## pg_dump / pg_restore — octobre 2026
-- **Choix / usage dans PFT** : sauvegarde hebdo automatisée de la base perso, restauration testée.
-- **Source** : [Documentation PostgreSQL — pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html) — ★★★
-- **Description** : exporte une base PostgreSQL dans un fichier cohérent (format custom compressé), restaurable avec pg_restore.
-
-## python-dotenv — octobre 2026
-- **Choix / usage dans PFT** : charge le `.env` dans `core/config.py`, pour garder les secrets hors du code et du repo.
-- **Source** : [python-dotenv sur PyPI](https://pypi.org/project/python-dotenv/) — ★★★
-- **Description** : lit un fichier `.env` et place ses valeurs dans les variables d'environnement du processus.
-
 ## FastAPI — octobre 2026
 - **Choix / usage dans PFT** : framework retenu pour l'API données (#32) et l'API du modèle (phase 4). Déjà utilisé en cours.
 - **Source** : [Documentation officielle FastAPI](https://fastapi.tiangolo.com/) — ★★★
