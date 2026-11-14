@@ -1,0 +1,17 @@
+PORTFOLIO: portfolio_id, portfolio_name [VARCHAR(50)], institution_name [VARCHAR(50)], wrapper_type [VARCHAR(10)], is_active [BOOLEAN]
+CONTENIR, 0N PORTFOLIO, 11 HOLDING
+HOLDING: holding_id, is_active [BOOLEAN]
+PORTER_SUR, 0N ASSET, 11 HOLDING
+ASSET: asset_id, asset_name [VARCHAR(100)], ticker [VARCHAR(20)], is_cash [BOOLEAN]
+
+:
+:
+CONCERNER, 0N HOLDING, 11 MOVEMENT
+:
+COTER, 0N ASSET, 11 QUOTE
+
+APP_USER: user_id, email [VARCHAR(255)], password_hash [VARCHAR(255)], role [VARCHAR(10)], created_at [TIMESTAMPTZ]
+:
+MOVEMENT: movement_id, movement_date [DATE], movement_type [VARCHAR(20)], quantity [NUMERIC(15,6)], unit_price [NUMERIC(12,6)], fees [NUMERIC(8,2)]
+:
+QUOTE: quote_id, quote_date [DATE], price [NUMERIC(12,6)]
