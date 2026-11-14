@@ -4,7 +4,7 @@ Modèle conceptuel de données (Merise) de la base PostgreSQL de PFT v2.
 Périmètre : patrimoine financier (portefeuilles, actifs, cotations, mouvements) et comptes d'accès à l'app.
 Hors périmètre : les news scrapées, qui vont dans le stockage big data (#22, #25).
 
-Point de départ : le schéma v1 (`db/schema/Create_DB_PFT.sql`, 4 tables). Les changements sont listés en fin de document.
+Point de départ : le schéma v1 (`db/schema/create_schema_v1.sql`, 4 tables). Les changements sont listés en fin de document.
 
 ---
 
@@ -126,7 +126,7 @@ Aucune donnée propre à l'établissement n'est utilisée par l'app. En faire un
 
 ## 6. Aperçu (non Merise)
 
-Diagramme de prévisualisation, rendu automatiquement par GitHub. La notation est entité-relation (pattes de corbeau), **pas** le formalisme Merise : le MCD officiel est celui de Looping, exporté dans `docs/`.
+Diagramme de prévisualisation, rendu automatiquement par GitHub. La notation est entité-relation (pattes de corbeau), **pas** le formalisme Merise : le MCD officiel est celui de Mocodo (MCD.mcd, rendu dans MCD.svg) `docs/merise`.
 
 ```mermaid
 erDiagram

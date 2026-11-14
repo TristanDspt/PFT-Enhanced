@@ -40,12 +40,12 @@
 - [x] Nouveau repo public + liens croisés dans les README (v2 → v1 privée, "disponible sur demande") — #16
 
 **1.2 Schéma v2**
-- [ ] 🎓 Révision express Merise (MCD, MLD, MPD) + prise en main de Looping — #1
-- [ ] MCD → MLD → MPD **PostgreSQL uniquement** (les news vont dans le stockage big data, hors Merise) — C4 · #1
-- [ ] Correction de la modélisation (séparation actif / portefeuille, nettoyage des contraintes et index) — C4 · #1
+- [x] 🎓 Révision express Merise (MCD, MLD, MPD) + prise en main de Mocodo — #1
+- [x] MCD → MLD → MPD **PostgreSQL uniquement** (les news vont dans le stockage big data, hors Merise) — C4 · #1
+- [x] Correction de la modélisation (séparation actif / portefeuille, nettoyage des contraintes et index) — C4 · #1
 - [x] Renommage FR → EN du code Python (commit séparé) — #3
-- [ ] Renommage FR → EN du schéma SQL avec le nouveau MPD — #1
-- [ ] Suppression du doublon `UNIQUE (pdt_id, cot_date)` sur `cotation_cot` — C4 · #1
+- [x] Renommage FR → EN du schéma SQL avec le nouveau MPD — #1
+- [x] Suppression du doublon `UNIQUE (pdt_id, cot_date)` sur `cotation_cot` — C4 · #1
 - [ ] Régime fiscal : taux dans `config.yaml` + régime dérivé de `ptf_type_enveloppe` (fin des taux en dur dans `st_logic.py`) — C4, C17 · #4
 - [x] Saisie : INSERT en f-strings → requêtes paramétrées (injection SQL) — C17 · #5
 - [x] Refacto : sortie du SQL de `st_logic.py` (fonctions TRI pures, `MovementType` dans `core/constants.py`) — C17 · #17

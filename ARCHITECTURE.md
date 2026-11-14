@@ -194,7 +194,7 @@ La page de saisie lance `update_pee.py` en sous-processus (`sys.executable -m pi
 
 ## Base de données
 
-Le schéma est dans `db/schema/Create_DB_PFT.sql` (4 tables : portefeuille, produit financier, cotation, mouvement). Il sera remplacé par le nouveau modèle Merise.
+Le schéma est dans `db/schema/create_schema_v1.sql` (4 tables : portefeuille, produit financier, cotation, mouvement). Il sera remplacé par le nouveau modèle Merise.
 
 ### Vues SQL (sources de données)
 

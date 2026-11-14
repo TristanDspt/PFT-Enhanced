@@ -21,7 +21,7 @@ class MovementType(StrEnum):
     Types de mouvement de la table mouvement_mvt (colonne mvt_type_mouvement).
 
     Doit rester synchronisé avec la contrainte CHECK du schéma
-    (db/schema/Create_DB_PFT.sql). StrEnum : chaque membre est une chaîne,
+    (db/schema/create_schema_v2.sql). StrEnum : chaque membre est une chaîne,
     donc utilisable tel quel dans les filtres pandas et les paramètres SQL.
     """
 

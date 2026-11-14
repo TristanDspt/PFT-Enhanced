@@ -40,7 +40,7 @@ L'outil centralise des actifs variés (ETF, Actions, PEE, Livrets) et automatise
    - `DB_NAME_DEMO=pft_demo` : le nom de la base créée à l'étape suivante
 5. Créer la base, charger le schéma puis les vues (dans cet ordre) :
    - `psql -U postgres -c "CREATE DATABASE pft_demo;"`
-   - `psql -U postgres -d pft_demo -f db/schema/Create_DB_PFT.sql`
+   - `psql -U postgres -d pft_demo -f db/schema/create_schema_v2.sql`
    - `psql -U postgres -d pft_demo -f db/views/vues.sql`
    - `psql -U postgres -d pft_demo -f db/views/vue_globale.sql`
    - `psql -U postgres -d pft_demo -f db/views/vue_apport.sql`
