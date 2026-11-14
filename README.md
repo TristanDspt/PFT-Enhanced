@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.14-blue)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.x-red)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-local-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-green)
 
 Migration d'une gestion financière complexe (anciennement sous Excel) vers une architecture **Python / PostgreSQL / Streamlit**.  
 L'outil centralise des actifs variés (ETF, Actions, PEE, Livrets) et automatise le suivi de performance avec calcul du TRI.
@@ -16,7 +16,7 @@ L'outil centralise des actifs variés (ETF, Actions, PEE, Livrets) et automatise
 | Composant | Technologie |
 | :--- | :--- |
 | **Langage** | Python 3.14 |
-| **Base de données** | PostgreSQL |
+| **Base de données** | PostgreSQL 18 |
 | **Interface** | Streamlit |
 | **DataViz** | Plotly |
 | **Performance** | pyxirr (XIRR) |
@@ -27,7 +27,11 @@ L'outil centralise des actifs variés (ETF, Actions, PEE, Livrets) et automatise
 
 ## ⚙️ Installation & Setup
 
-**Prérequis** : Python 3.14 (testé avec 3.14.2) et PostgreSQL installés.
+**Prérequis**
+- Python 3.14 (testé avec 3.14.2)
+- PostgreSQL 18 : installeur officiel depuis [postgresql.org](https://www.postgresql.org/download/) (port 5432 par défaut), puis ajouter son dossier `bin` au `PATH` pour avoir `psql` (sous Windows, par défaut `C:\Program Files\PostgreSQL\18\bin`).
+
+**Étapes**
 
 1. Cloner le repo
 2. Créer et activer un venv :
@@ -40,21 +44,31 @@ L'outil centralise des actifs variés (ETF, Actions, PEE, Livrets) et automatise
    - `DB_NAME_DEMO=pft_demo` : le nom de la base créée à l'étape suivante
 5. Créer la base, charger le schéma puis les vues (dans cet ordre) :
    - `psql -U postgres -c "CREATE DATABASE pft_demo;"`
-   - `psql -U postgres -d pft_demo -f db/schema/create_schema_v2.sql`
+   - `psql -U postgres -d pft_demo -f db/schema/create_schema_v1.sql`
    - `psql -U postgres -d pft_demo -f db/views/vues.sql`
    - `psql -U postgres -d pft_demo -f db/views/vue_globale.sql`
    - `psql -U postgres -d pft_demo -f db/views/vue_apport.sql`
    - `psql -U postgres -d pft_demo -f db/views/vue_historique.sql`
    - `psql -U postgres -d pft_demo -f db/views/vue_historique_pdt.sql`
-
-   Sous Windows, si `psql` n'est pas reconnu, ajouter le dossier `bin` de PostgreSQL au `PATH`.
 6. Lancer l'application : `python -m streamlit run app/main.py`
 
 L'application cible la base `DEMO` par défaut. La variable `ENVIRONMENT` du `.env` permet de basculer vers une autre base (voir `ARCHITECTURE.md`).
 
 > 🚧 Un script de seed (données fictives) est prévu. Tant qu'il n'existe pas, la base de démonstration est vide et certaines pages peuvent afficher des erreurs.
 
+### Schéma v2 (en préparation)
+
+Le nouveau modèle de données ([`docs/merise/mcd.md`](docs/merise/mcd.md)) est prêt, mais l'application tourne encore sur le schéma v1 jusqu'à l'adaptation des vues et du code. Pour créer et vérifier une base v2 :
+
+    psql -U postgres -c "CREATE DATABASE pft_v2;"
+    psql -U postgres -d pft_v2 -f db/schema/create_schema_v2.sql
+    psql -U postgres -d pft_v2 -c "\dt"
+
+Résultat attendu : 6 tables (`app_user`, `asset`, `holding`, `movement`, `portfolio`, `quote`). Le script s'exécute dans une transaction : en cas d'erreur, rien n'est créé.
+
 ---
+
+## 🔄 Mise à jour des données
 
 Ces scripts **écrivent dans la base ciblée par `ENVIRONMENT`**. Vérifier l'environnement actif avant de les lancer.
 
@@ -65,8 +79,10 @@ Ces scripts **écrivent dans la base ciblée par `ENVIRONMENT`**. Vérifier l'en
 
 ## 📚 Documentation
 
-Voir [`ARCHITECTURE.md`](ARCHITECTURE.md) pour le détail complet : structure des fichiers, fonctions, vues SQL, conventions.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) : structure des fichiers, fonctions, vues SQL, conventions.
+- [`docs/merise/mcd.md`](docs/merise/mcd.md) : modèle conceptuel de données (Merise) du schéma v2.
+- [`docs/veille.md`](docs/veille.md) : veille technologique et choix d'outils.
 
 ---
 
-*Projet personnel développé dans le cadre d'une reconversion Dev IA. Licence : voir le fichier `LICENSE`.*
+*Projet personnel développé dans le cadre d'une formation Dev IA en alternance. Licence : voir le fichier `LICENSE`.*
