@@ -34,3 +34,9 @@
 - **Source** : [Documentation officielle pytest](https://docs.pytest.org/) — ★★★
 - **Description** : framework de tests Python : des fonctions préfixées `test_` contenant des `assert`, découvertes et lancées automatiquement par la commande `pytest`.
 - **Alternatives** : unittest (bibliothèque standard Python) — écarté : pytest demande moins de code (un simple `assert` au lieu des méthodes `assertEqual`…), propose des fixtures pour préparer les données de test, et c'est l'outil vu en cours et le plus répandu.
+
+## Mocodo — novembre 2026
+- **Choix / usage dans PFT** : outil de modélisation Merise du schéma v2 (#1). Le MCD est écrit en texte (`docs/merise/mcd.mcd`), rendu en image (`docs/merise/MCD.svg`).
+- **Source** : [Mocodo — site officiel et documentation](https://www.mocodo.net/) — ★★★
+- **Description** : outil open source de modélisation Merise : on décrit les entités, les associations et les cardinalités dans un texte simple, Mocodo dessine le MCD au formalisme Merise et peut en dériver le MLD et le SQL.
+- **Alternatives** : Looping, JMerise — écartées : modélisation à la souris dans un fichier binaire, illisible dans un diff Git et lent à modifier. Avec Mocodo, le MCD est du texte versionné avec le reste du projet : chaque changement de modèle se lit ligne par ligne dans l'historique Git. Limite assumée : le MPD reste écrit à la main (`db/schema/create_schema_v2.sql`), car Mocodo ne génère pas les contraintes CHECK, les index ni les commentaires.
