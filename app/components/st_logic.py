@@ -545,33 +545,50 @@ def get_period_invested(history_df, period_df, period, start_date, product_ids):
     return invested
 
 
-def get_net_capital(df, product_ids):
+def get_net_capital(df, product_ids, tax_rates):
     """
-    Calcule le capital net et la performance après fiscalité sur les plus-values.
-    PEA/PEE : 18.6% | CTO : 31.4%
-    Si pas de plus-value, retourne le capital actuel brut.
+    Calcule le capital net par produit, après fiscalité sur les plus-values.
+
+    Le taux appliqué dépend du type d'enveloppe du portefeuille du produit
+    (colonne ptf_type_enveloppe). Sans plus-value, le capital net est le
+    capital actuel brut.
 
     Args:
-        df (DataFrame): view_global_portefeuille
-        product_ids (list): liste des pdt_id à inclure — ex: [1, 7] pour PEA (ETF + cash)
+        df (DataFrame): view_global_portefeuille (doit contenir ptf_type_enveloppe).
+        product_ids (list): pdt_id à inclure, ex : [1, 7] pour le PEA (ETF + cash).
+        tax_rates (dict): {type_enveloppe: taux}, taux en fraction (0.186 = 18,6 %),
+            ex : TAX_RATES de core.config.
 
     Returns:
-        dict: {"net": float, "euro": float, "pct": float}
+        dict: {pdt_id: capital_net}.
+
+    Raises:
+        ValueError: Si le type d'enveloppe d'un produit n'a pas de taux dans tax_rates.
     """
-    tax_rates = {1: 18.6, 2: 31.4, 3: 18.6, 4: 18.6, 5: 18.6, 6: 18.6}
     net_capital = {}
-    df = df.copy()
 
     for product_id in product_ids:
         temp_df = df.query("pdt_id == @product_id and pdt_cash == False and pdt_est_actif == True")
-        capital_gain = temp_df['profit_euro'].sum()
+
+        # Produit cash ou inactif : rien à calculer
+        if temp_df.empty:
+            net_capital[product_id] = 0.0
+            continue
+
+        envelope = temp_df["ptf_type_enveloppe"].iloc[0]
+        if envelope not in tax_rates:
+            raise ValueError(
+                f"Pas de taux d'imposition pour l'enveloppe {envelope!r} "
+                f"(pdt_id={product_id}) : à ajouter dans config.yaml"
+            )
+
+        capital_gain = temp_df["profit_euro"].sum()
+        current_capital = temp_df["capital_actuel"].sum()
 
         # Fiscalité uniquement si plus-value positive
-        if capital_gain > 0:
-            tax = capital_gain * tax_rates[product_id] / 100
-            net_capital[product_id] = temp_df['capital_actuel'].sum() - tax
-        else:
-            net_capital[product_id] = temp_df['capital_actuel'].sum()
+        taxable_gain = max(capital_gain, 0)   # pas d'impôt sur une moins-value
+        tax = taxable_gain * tax_rates[envelope]
+        net_capital[product_id] = current_capital - tax
 
     return net_capital
 

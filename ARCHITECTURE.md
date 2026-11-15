@@ -131,7 +131,7 @@ Toute la configuration passe par `core/config.py`.
 | Nature | Emplacement | Exemples |
 | :--- | :--- | :--- |
 | Secrets et paramètres de connexion | `.env` (non versionné) | identifiants PostgreSQL, environnement actif |
-| Paramètres techniques et réglementaires | `settings/config.yaml` | taux fiscaux |
+| Paramètres techniques et réglementaires | `settings/config.yaml`, lu et validé par `core/config.py` | taux d'imposition par type d'enveloppe (`tax_rates` → `TAX_RATES`) |
 | Réglages personnels | `settings/bank.yaml` (non versionné) | formats des fichiers bancaires |
 | Valeurs fermées partagées entre couches | `core/constants.py` (Enum) | types de mouvement |
 | Règles de calcul | modules de logique (`st_logic.py`) | types de mouvement retenus pour le TRI |
@@ -224,11 +224,11 @@ Le schéma est dans `db/schema/create_schema_v1.sql` (4 tables : portefeuille, p
 | `get_total_wealth(df)` | df | `float` |
 | `get_market_perf(df)` | df | `dict {euro, pct}` |
 | `get_account_weights(df)` | df | `dict {etf, pee, savings}` |
-| `get_net_capital(df, product_ids)` | df, list[int] | `dict {pdt_id: net}` |
+| `get_net_capital(df, product_ids, tax_rates)` | df, list[int], dict | `dict {pdt_id: net}` |
 | `get_portfolio_tri(df, flows_df, portfolio_ids, today=None)` | df, flows_df, list, Timestamp (optionnel) | `float` |
 | `get_product_tri(df, flows_df, product_ids, today=None)` | df, flows_df, list, Timestamp (optionnel) | `dict {pdt_id: float}` |
 
-> ⚠️ `get_net_capital` prend `product_ids` (`list[int]`) et retourne un `dict {pdt_id: net}`. Fiscalité par `pdt_id` : PEA / PEE 18.6 % | CTO 31.4 %. Pas d'impôt s'il n'y a pas de plus-value.
+> ⚠️ `get_net_capital` prend `product_ids` (`list[int]`) et `tax_rates` (`dict {type_enveloppe: taux}`, taux en fraction : `0.186` = 18,6 %), et retourne un `dict {pdt_id: net}`. Les taux viennent de `TAX_RATES` (`core/config.py`, lu dans `settings/config.yaml`) et sont passés par la page. Le type d'enveloppe de chaque produit est lu dans la colonne `ptf_type_enveloppe` de `df` : `ValueError` si ce type n'a pas de taux. Pas d'impôt s'il n'y a pas de plus-value.
 
 > ⚠️ `get_portfolio_tri` calcule le TRI pour une ou plusieurs **enveloppes** (`ptf_id`) → `float`.
 > `get_product_tri` calcule le TRI pour un ou plusieurs **produits** (`pdt_id`) → `dict {pdt_id: float}`.

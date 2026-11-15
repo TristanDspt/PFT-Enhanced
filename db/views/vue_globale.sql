@@ -30,7 +30,7 @@ derniere_cotation AS (
     SELECT pdt_id, cot_prix, cot_date
     FROM (
         SELECT pdt_id, cot_prix, cot_date,
-               ROW_NUMBER() OVER (PARTITION BY pdt_id ORDER BY cot_date DESC) as rn
+                ROW_NUMBER() OVER (PARTITION BY pdt_id ORDER BY cot_date DESC) as rn
         FROM public.cotation_cot
     ) t WHERE t.rn = 1
 )
@@ -86,6 +86,7 @@ SELECT
     END AS profit_pourcent,
     
     dc.cot_date AS derniere_maj_cours
+    vpa.ptf_type_enveloppe
 
 FROM view_positions_actuelles vpa
 LEFT JOIN flux_net fn ON vpa.pdt_id = fn.pdt_id

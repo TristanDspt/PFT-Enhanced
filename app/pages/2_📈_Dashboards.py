@@ -24,6 +24,7 @@ import streamlit as st
 import app.components.database as db
 import app.components.st_charts as charts
 import app.components.st_logic as logic
+from core.config import TAX_RATES
 
 # --------------------------------------------------------------------------------
 
@@ -216,8 +217,9 @@ match selected_view:
         capital = logic.get_total_wealth(pea_df)
         perf = logic.get_market_perf(pea_df)
         invested_capital = pea_df['capital_investi'].sum()
-        net_capital = logic.get_net_capital(df, [1])
+        net_capital = logic.get_net_capital(df, [1], TAX_RATES)
         tri = logic.get_portfolio_tri(df, flows_df, [1])
+        tax_rate = TAX_RATES["PEA"]
 
         st.markdown("<h2 style='text-align: center;'>PEA : S&P 500</h2>", unsafe_allow_html=True)
 
@@ -258,7 +260,7 @@ match selected_view:
             st.metric(
                 label="Capital net",
                 value=f"{net_capital[1]:,.0f} €".replace(",", " "),
-                help="Capital net d'impots : 18.6 %"
+                help=f"Capital net d'impots : {tax_rate * 100:.1f} %"
             )
         with col5:
             st.metric(
@@ -289,13 +291,13 @@ match selected_view:
             st.metric(
                 label="Haut",
                 value=f"{high:,.2f} €".replace(",", " "),
-                help="Cours le plus haut sur"
+                help="Cours le plus haut sur la periode"
             )
         with col8:
             st.metric(
                 label="Bas",
                 value=f"{low:,.2f} €".replace(",", " "),
-                help="Cours le plus bas"
+                help="Cours le plus bas sur la periode"
             )
         with col9:
             st.metric(
@@ -325,8 +327,9 @@ match selected_view:
         capital = logic.get_total_wealth(cto_df)
         perf = logic.get_market_perf(cto_df)
         invested_capital = cto_df['capital_investi'].sum()
-        net_capital = logic.get_net_capital(df, [2])
+        net_capital = logic.get_net_capital(df, [2], TAX_RATES)
         tri = logic.get_portfolio_tri(df, flows_df, [2])
+        tax_rate = TAX_RATES["CTO"]
 
         st.markdown("<h2 style='text-align: center;'>CTO : GOLD</h2>", unsafe_allow_html=True)
 
@@ -364,7 +367,7 @@ match selected_view:
             st.metric(
                 label="Capital net",
                 value=f"{net_capital[2]:,.0f} €".replace(",", " "),
-                help="Capital net d'impots : 18.6 %"
+                help=f"Capital net d'impots : {tax_rate * 100:.1f} %"
             )
         with col5:
             st.metric(
@@ -395,13 +398,13 @@ match selected_view:
             st.metric(
                 label="Haut",
                 value=f"{high:,.2f} €".replace(",", " "),
-                help="Cours le plus haut sur"
+                help="Cours le plus haut sur la periode"
             )
         with col8:
             st.metric(
                 label="Bas",
                 value=f"{low:,.2f} €".replace(",", " "),
-                help="Cours le plus bas"
+                help="Cours le plus bas sur la periode"
             )
         with col9:
             st.metric(
@@ -433,8 +436,9 @@ match selected_view:
         employer_match = stef_df["abondement_recu"].sum()
         perf = logic.get_market_perf(stef_df)
         invested_capital = stef_df['capital_investi'].sum()
-        net_capital = logic.get_net_capital(df, [3])
+        net_capital = logic.get_net_capital(df, [3], TAX_RATES)
         tri = logic.get_portfolio_tri(df, flows_df, [3])
+        tax_rate = TAX_RATES["PEE"]
 
         st.markdown("<h2 style='text-align: center;'>PEE : STEF</h2>", unsafe_allow_html=True)
 
@@ -472,7 +476,7 @@ match selected_view:
             st.metric(
                 label="Capital net",
                 value=f"{net_capital[3]:,.0f} €".replace(",", " "),
-                help="Capital net d'impots : 18.6 %"
+                help=f"Capital net d'impôts : {tax_rate * 100:.1f} %"
             )
         with col5:
             st.metric(
@@ -514,13 +518,13 @@ match selected_view:
             st.metric(
                 label="Haut",
                 value=f"{high:,.2f} €".replace(",", " "),
-                help="Cours le plus haut sur"
+                help="Cours le plus haut sur la periode"
             )
         with col10:
             st.metric(
                 label="Bas",
                 value=f"{low:,.2f} €".replace(",", " "),
-                help="Cours le plus bas"
+                help="Cours le plus bas sur la periode"
             )
             
         # GRAPHIQUES — (réactif au slider)
@@ -545,8 +549,9 @@ match selected_view:
         employer_match = cic_df["abondement_recu"].sum()
         perf = logic.get_market_perf(cic_df)
         invested_capital = cic_df['capital_investi'].sum()
-        net_capital = logic.get_net_capital(df, [4, 5, 6])
+        net_capital = logic.get_net_capital(df, [4, 5, 6], TAX_RATES)
         tri = logic.get_portfolio_tri(df, flows_df, [4])
+        tax_rate = TAX_RATES["PEE"]
 
         # DONUTS — Préparation des DataFrames filtrés par enveloppe
         donut_df = df.query("pdt_id in [4, 5, 6]").groupby('pdt_id')['capital_actuel'].sum().reset_index()
@@ -573,7 +578,7 @@ match selected_view:
             st.metric(
                 label="Capital net",
                 value=f"{sum(net_capital.values()):,.0f} €".replace(",", " "),
-                help="Capital net d'impots : 18.6 %"
+                help=f"Capital net d'impôts : {tax_rate * 100:.1f} %"
             )
         with col2:
             st.metric(

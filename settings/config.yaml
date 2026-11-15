@@ -1,5 +1,7 @@
 # settings/config.yaml
 
-tax_rates:
-  reduced: 0.186   # PEA, PEE : prélèvements sociaux seuls
-  flat: 0.314      # tout le reste : flat tax (PFU)
+tax_rates:      # taux d'imposition des plus-values, par type d'enveloppe
+  PEA: 0.186
+  PEE: 0.186
+  CTO: 0.314
+  Livrets: 0.0
