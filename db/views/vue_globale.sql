@@ -85,7 +85,7 @@ SELECT
         ELSE 0 
     END AS profit_pourcent,
     
-    dc.cot_date AS derniere_maj_cours
+    dc.cot_date AS derniere_maj_cours,
     vpa.ptf_type_enveloppe
 
 FROM view_positions_actuelles vpa
