@@ -46,7 +46,7 @@
 - [x] Renommage FR → EN du code Python (commit séparé) — #3
 - [x] Renommage FR → EN du schéma SQL avec le nouveau MPD — #1
 - [x] Suppression du doublon `UNIQUE (pdt_id, cot_date)` sur `cotation_cot` — C4 · #1
-- [ ] Régime fiscal : taux dans `config.yaml` + régime dérivé de `ptf_type_enveloppe` (fin des taux en dur dans `st_logic.py`) — C4, C17 · #4
+- [x] Régime fiscal : taux dans `config.yaml` + régime dérivé de `ptf_type_enveloppe` (fin des taux en dur dans `st_logic.py`) — C4, C17 · #4
 - [x] Saisie : INSERT en f-strings → requêtes paramétrées (injection SQL) — C17 · #5
 - [x] Refacto : sortie du SQL de `st_logic.py` (fonctions TRI pures, `MovementType` dans `core/constants.py`) — C17 · #17
 - [ ] Adaptation des vues SQL et du code au schéma v2 — C4, C17 · #18
@@ -72,8 +72,8 @@
 - [x] Sprints de 2 semaines lancés (sprint 1 : 2 → 15 nov) — C16 · #11
 - [ ] Rétro de 10 min notée dans une issue à chaque fin de sprint (en continu) — C16
 - [ ] Cahier des charges minimal : contexte, acteurs, objectifs, contraintes (budget 0 €, local), planning — E1, C14 · #12
-- [ ] Veille : fichier `docs/veille.md`, une fiche par techno découverte (techno, source + fiabilité, description rapide), alimenté au fil du projet — C6 · #13
-- [ ] Doc d'installation PostgreSQL + script de création du schéma — C4 · #2
+- [x] Veille : fichier `docs/veille.md`, une fiche par techno découverte (techno, source + fiabilité, description rapide), alimenté au fil du projet — C6 · #13
+- [x] Doc d'installation PostgreSQL + script de création du schéma — C4 · #2
 
 🛑 **Fin novembre** : bilan du temps réel mesuré → réajustement de toute la suite du planning.
 ⏸️ **Marge** : 1re quinzaine de décembre.
