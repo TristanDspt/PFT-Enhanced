@@ -555,7 +555,7 @@ def get_net_capital(df, product_ids, tax_rates):
 
     Args:
         df (DataFrame): view_global_portefeuille (doit contenir ptf_type_enveloppe).
-        product_ids (list): pdt_id à inclure, ex : [1, 7] pour le PEA (ETF + cash).
+        product_ids (list): pdt_id à inclure.
         tax_rates (dict): {type_enveloppe: taux}, taux en fraction (0.186 = 18,6 %),
             ex : TAX_RATES de core.config.
 
