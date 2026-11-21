@@ -1,7 +1,7 @@
 # pyproject.toml
+
 # Configuration de ruff (linter) pour PFT.
 # Usage : `ruff check .` (diagnostic) puis `ruff check . --fix` (corrections sûres uniquement).
-
 [tool.ruff]
 line-length = 120
 
@@ -24,3 +24,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Faux positifs : ruff ne voit pas les @variables utilisées dans DataFrame.query()
 "app/components/st_logic.py" = ["F841"]
+
+# --------------------------------------------------------------------------------
+
+# pytest : racine du projet dans le path (imports app/ et core/ depuis les tests),
+# tests cherchés uniquement dans tests/
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
