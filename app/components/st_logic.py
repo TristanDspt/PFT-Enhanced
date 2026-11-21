@@ -41,7 +41,7 @@ PORTFOLIO_TO_PRODUCT_IDS = {
 
 # --------------------------------------------------------------------------------
 
-def get_total_wealth(df):
+def get_total_wealth(df: pd.DataFrame) -> float:
     """
     Calcule la valeur totale du patrimoine (cash + titres).
 
@@ -55,7 +55,7 @@ def get_total_wealth(df):
     return capital
 
 
-def get_market_perf(df):
+def get_market_perf(df: pd.DataFrame) -> dict[str, float]:
     """
     Calcule la performance globale des marchés (hors produits cash).
     Inclut l'abondement dans la base de calcul du pourcentage.
@@ -81,7 +81,7 @@ def get_market_perf(df):
     return {"euro": profit_euro, "pct": profit_pct}
 
 
-def get_account_weights(df):
+def get_account_weights(df: pd.DataFrame) -> dict[str, float]:
     """
     Calcule le poids de chaque enveloppe dans le patrimoine total (en %).
 
@@ -111,7 +111,7 @@ def get_account_weights(df):
     return {"etf": etf_weight, "pee": pee_weight, "savings": savings_weight}
 
 
-def get_months_count(period):
+def get_months_count(period: str) -> int:
     """
     Convertit le label du slider en nombre de mois.
     Retourne 0 pour le cas "Début Mois" (non présent dans le mapping).
@@ -141,7 +141,7 @@ def get_months_count(period):
     return months_count
 
 
-def get_start_date(period):
+def get_start_date(period: str) -> pd.Timestamp:
     """
     Calcule la date de début de la période sélectionnée via le slider.
     Cas "Début Mois" : retourne le 1er du mois en cours.
@@ -175,7 +175,7 @@ def get_start_date(period):
     return start_date
 
 
-def get_period_df(history_df, start_date):
+def get_period_df(history_df: pd.DataFrame, start_date: pd.Timestamp) -> pd.DataFrame:
     """
     Filtre history_df sur la période sélectionnée.
 
@@ -192,7 +192,12 @@ def get_period_df(history_df, start_date):
     return period_df
 
 
-def get_etf_period_perf(history_df, period_df, start_date, period):
+def get_etf_period_perf(
+    history_df: pd.DataFrame,
+    period_df: pd.DataFrame,
+    start_date: pd.Timestamp,
+    period: str,
+) -> dict[str, float]:
     """
     Calcule la performance des ETF (PEA + CTO) sur la période sélectionnée.
     Gère les cas spéciaux "Début Mois" et "Max".
@@ -251,7 +256,13 @@ def get_etf_period_perf(history_df, period_df, start_date, period):
     return {"euro": perf_etf_period_euro, "pct": perf_etf_period_pct}
 
 
-def get_portfolio_period_perf(history_df, period_df, period, start_date, mapping):
+def get_portfolio_period_perf(
+    history_df: pd.DataFrame,
+    period_df: pd.DataFrame,
+    period: str,
+    start_date: pd.Timestamp,
+    mapping: dict[int, str],
+) -> dict[str, dict[str, float]]:
     """
     Calcule la performance de chaque portefeuille sur la période sélectionnée.
     Gère les cas spéciaux "Début Mois" et "Max".
@@ -316,7 +327,12 @@ def get_portfolio_period_perf(history_df, period_df, period, start_date, mapping
     return perf
 
 
-def get_monthly_table_by_portfolio(history_df, contributions_df, period, portfolio_name_map):
+def get_monthly_table_by_portfolio(
+    history_df: pd.DataFrame,
+    contributions_df: pd.DataFrame,
+    period: str,
+    portfolio_name_map: dict[int, str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Construit le tableau mensuel du journal de bord.
     Retourne deux DataFrames :
@@ -414,7 +430,11 @@ def get_monthly_table_by_portfolio(history_df, contributions_df, period, portfol
     return table_df, table_buffer_df
 
 
-def get_chart_data(table_buffer_df, contributions_df, period):
+def get_chart_data(
+    table_buffer_df: pd.DataFrame,
+    contributions_df: pd.DataFrame,
+    period: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Prépare les deux DataFrames nécessaires au graphique principal.
     - contributions_chart_df : cumul des apports mensuels, filtré et réindexé sur la période
@@ -485,7 +505,13 @@ def get_chart_data(table_buffer_df, contributions_df, period):
     return contributions_chart_df, capital_chart_df
 
 
-def get_period_invested(history_df, period_df, period, start_date, product_ids):
+def get_period_invested(
+    history_df: pd.DataFrame,
+    period_df: pd.DataFrame,
+    period: str,
+    start_date: pd.Timestamp,
+    product_ids: list[int],
+) -> float:
     """
     Calcule le capital total injecté sur une liste de produits sur la période sélectionnée.
     Gère les cas spéciaux "Début Mois" et "Max".
@@ -545,7 +571,11 @@ def get_period_invested(history_df, period_df, period, start_date, product_ids):
     return invested
 
 
-def get_net_capital(df, product_ids, tax_rates):
+def get_net_capital(
+    df: pd.DataFrame,
+    product_ids: list[int],
+    tax_rates: dict[str, float],
+) -> dict[int, float]:
     """
     Calcule le capital net par produit, après fiscalité sur les plus-values.
 
@@ -593,7 +623,12 @@ def get_net_capital(df, product_ids, tax_rates):
     return net_capital
 
 
-def get_portfolio_tri(df, flows_df, portfolio_ids, today=None):
+def get_portfolio_tri(
+    df: pd.DataFrame,
+    flows_df: pd.DataFrame,
+    portfolio_ids: list[int],
+    today: pd.Timestamp | None = None,
+) -> float:
     """
     Calcule le TRI (XIRR) annualisé d'une ou plusieurs enveloppes.
 
@@ -623,7 +658,12 @@ def get_portfolio_tri(df, flows_df, portfolio_ids, today=None):
     return xirr(dates, amounts) * 100
 
 
-def get_product_tri(df, flows_df, product_ids, today=None):
+def get_product_tri(
+    df: pd.DataFrame,
+    flows_df: pd.DataFrame,
+    product_ids: list[int],
+    today: pd.Timestamp | None = None,
+) -> dict[int, float]:
     """
     Calcule le TRI (XIRR) annualisé de chaque produit d'une liste.
 
@@ -662,7 +702,14 @@ def get_product_tri(df, flows_df, product_ids, today=None):
     return tri
 
 
-def get_product_period_perf(history_product_df, period_product_df, period, start_date, product_ids, aggregate=False):
+def get_product_period_perf(
+    history_product_df: pd.DataFrame,
+    period_product_df: pd.DataFrame,
+    period: str,
+    start_date: pd.Timestamp,
+    product_ids: list[int],
+    aggregate: bool = False,
+) -> dict[str, float] | dict[int, dict[str, float]]:
     """
     Calcule la performance de chaque produit sur la période sélectionnée.
     Gère les cas spéciaux "Début Mois" et "Max".
@@ -737,7 +784,12 @@ def get_product_period_perf(history_product_df, period_product_df, period, start
     return perf
 
 
-def get_monthly_table_by_product(history_df, contributions_df, period, product_group_map):
+def get_monthly_table_by_product(
+    history_df: pd.DataFrame,
+    contributions_df: pd.DataFrame,
+    period: str,
+    product_group_map: dict[int, str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Construit le tableau mensuel du journal de bord.
     Retourne deux DataFrames :
